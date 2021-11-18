@@ -30,6 +30,15 @@
  ********************************************************************************
  */
 #include "precomp.h"
+#if CFG_NOTIFY_TX_HANG_METRIC
+#ifdef CONFIG_AMZN_METRICS_LOG
+#include <linux/amzn_metricslog.h>
+#endif
+#ifdef CONFIG_AMAZON_METRICS_LOG
+#include <linux/metricslog.h>
+#endif
+#endif
+
 /*******************************************************************************
  *                              C O N S T A N T S
  ********************************************************************************
@@ -63,6 +72,11 @@ typedef struct _CODE_MAPPING_T {
 BOOLEAN fgIsBusAccessFailed = FALSE;
 #ifdef ENABLED_IN_ENGUSERDEBUG
 extern enum UT_TRIGGER_CHIP_RESET trChipReset;
+#endif
+
+#if CFG_NOTIFY_TX_HANG_METRIC
+extern INT_8 ucAbSence;
+extern INT_8 ucPidOverflow;
 #endif
 
 
@@ -7278,4 +7292,39 @@ int wlanSuspendRekeyOffload(P_GLUE_INFO_T prGlueInfo, IN UINT_8 ucRekeyDisable)
 
 	return i4Rslt;
 }
+#endif
+
+#if CFG_NOTIFY_TX_HANG_METRIC
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
+{
+	int ret = -1;
+
+	if (fgIsPid) {
+		if (ucPidOverflow == 0)
+			return;
+		ret = log_counter_to_vitals(ANDROID_LOG_INFO,
+			"Kernel vitals", "wifiKDM", "wifi-mac-layer-unreachable",
+			"NoPID", 1, "count", NULL, VITALS_NORMAL);
+		if (ret)
+			DBGLOG(AIS, ERROR,
+				"conn-PID-Overflow matric fail\n");
+		else
+			ucPidOverflow = 0;
+	}
+	else {
+		if (ucAbSence == 0)
+			return;
+		ret = log_counter_to_vitals(ANDROID_LOG_INFO,
+			"Kernel vitals", "wifiKDM", "wifi-mac-layer-unreachable",
+			"NoPresence", 1, "count", NULL, VITALS_NORMAL);
+		if (ret)
+			DBGLOG(QM, WARN,
+				"Absence is timeout matric to fwk fail\n");
+		else
+			ucAbSence = 0;
+	}
+
+}
+#endif
 #endif

@@ -2013,3 +2013,66 @@ int mtk_cfg80211_vendor_set_scan_mac_oui(struct wiphy *wiphy,
 	return 0;
 }
 
+/*add roaming metrics for fos7*/
+#if CFG_SUPPORT_ROAMING
+int mtk_cfg80211_vendor_event_roaming_info(P_GLUE_INFO_T prGlueInfo)
+{
+	struct sk_buff *skb;
+	PARAM_ROAMING_INFO_EVENT rRoamingInfoEvt;
+	P_ROAMING_INFO_T prRoamingFsmInfo;
+	struct wireless_dev *wdev = NULL;
+	struct wiphy *wiphy = NULL;
+	OS_SYSTIME u4RoamingEndTime;
+
+	wiphy = priv_to_wiphy(prGlueInfo);
+	if (!wiphy)
+		return -EINVAL;
+
+	wdev = prGlueInfo->prDevHandler->ieee80211_ptr;
+	if (!wdev)
+		return -EINVAL;
+
+	kalMemZero(&rRoamingInfoEvt, sizeof(PARAM_ROAMING_INFO_EVENT));
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+	skb = cfg80211_vendor_event_alloc(wiphy, wdev, sizeof(PARAM_ROAMING_INFO_EVENT),
+					  WIFI_EVENT_ROANING_METRICS, GFP_KERNEL);
+#else
+	skb = cfg80211_vendor_event_alloc(wiphy, sizeof(PARAM_ROAMING_INFO_EVENT),
+					  WIFI_EVENT_ROANING_METRICS, GFP_KERNEL);
+#endif
+	if (!skb) {
+		DBGLOG(REQ, ERROR, "%s allocate skb failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	prRoamingFsmInfo = (P_ROAMING_INFO_T) &(prGlueInfo->prAdapter->rWifiVar.rRoamingInfo);
+	u4RoamingEndTime = (OS_SYSTIME) kalGetTimeTick();
+
+	rRoamingInfoEvt.eRoamingStatus = prRoamingFsmInfo->eRoamingStatus;
+	rRoamingInfoEvt.u4RoamingTime= u4RoamingEndTime - prRoamingFsmInfo->u4RoamingStartTime;
+	rRoamingInfoEvt.ucHasRoamingScan = prRoamingFsmInfo->ucHasRoamingScan;
+	rRoamingInfoEvt.oldApRssi = prRoamingFsmInfo->oldApRssi;
+	rRoamingInfoEvt.roaming_type = prRoamingFsmInfo->eRoaming_type;
+
+	DBGLOG(REQ, TRACE, "ROAMING_INFO Event: status=%u, roamingtime=%d, hasscan=%u, oldApRssi =%d len= %d, type= %u\n",
+		rRoamingInfoEvt.eRoamingStatus, rRoamingInfoEvt.u4RoamingTime,
+		rRoamingInfoEvt.ucHasRoamingScan, rRoamingInfoEvt.oldApRssi,
+		sizeof(PARAM_ROAMING_INFO_EVENT),
+		rRoamingInfoEvt.roaming_type);
+
+	/*NLA_PUT_U32(skb, ROAMING_EVENT_INFO, roaming info);*/
+	if (unlikely(nla_put(skb, AMZN_NL80211_VENDOR_SUBCMD_ROAMING_INFO,
+		sizeof(PARAM_ROAMING_INFO_EVENT), &rRoamingInfoEvt) < 0))
+		goto nla_put_failure;
+
+	cfg80211_vendor_event(skb, GFP_KERNEL);
+	return 0;
+
+nla_put_failure:
+	kfree_skb(skb);
+	return -ENOMEM;
+}
+
+#endif
+

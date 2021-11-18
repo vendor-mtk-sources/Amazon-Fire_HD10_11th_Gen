@@ -116,7 +116,6 @@ source "drivers/staging/dyn_obj/Kconfig"
 
 source "drivers/staging/amazon/Kconfig"
 
-# Include the common BSP driver config
-#source "../../../device/amazon/kernel/driver/Kconfig"
+
 
 endif # STAGING

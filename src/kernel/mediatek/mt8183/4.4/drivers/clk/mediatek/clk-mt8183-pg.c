@@ -3216,7 +3216,8 @@ static int subsys_is_on(enum subsys_id id)
 	int r;
 	struct subsys *sys = id_to_sys(id);
 
-	WARN_ON(!sys);
+	if (WARN_ON(!sys))
+		return -EINVAL;
 
 	r = sys->ops->get_state(sys);
 

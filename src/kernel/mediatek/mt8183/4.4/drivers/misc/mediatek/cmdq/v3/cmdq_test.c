@@ -2124,6 +2124,7 @@ static void testcase_module_full_dump(void)
 	if (false == alreadyEnableLog)
 		cmdq_core_set_log_level(0);
 
+	cmdq_task_destroy(handle);
 	CMDQ_LOG("%s END\n", __func__);
 }
 
@@ -3129,7 +3130,7 @@ static void testcase_poll_monitor_delay_continue(struct work_struct *workItem)
 
 static int32_t testcase_poll_monitor_callback(unsigned long data)
 {
-	uint32_t pollTime;
+	uint32_t pollTime = 0;
 
 	if (false == gPollMonitor.status)
 		return 0;
@@ -3434,13 +3435,13 @@ void testcase_prefetch_from_DTS(void)
 
 static void testcase_specific_bus_MMSYS(void)
 {
-	uint32_t i;
+	uint32_t i = 0;
 	const uint32_t loop = 1000;
 	const uint32_t pattern = (1 << 0) | (1 << 2) | (1 << 16);
-	uint32_t mmsys_register;
+	uint32_t mmsys_register = 0;
 	struct cmdqRecStruct *handle = NULL;
-	cmdqBackupSlotHandle slot_handle;
-	uint32_t start_time, end_time, duration_time;
+	cmdqBackupSlotHandle slot_handle = 0;
+	uint32_t start_time = 0, end_time = 0, duration_time = 0;
 
 	CMDQ_LOG("%s\n", __func__);
 
@@ -4125,9 +4126,9 @@ static void testcase_long_jump_c(void)
 {
 	struct cmdqRecStruct *handle = NULL;
 	const u32 init_val = 1, post_val = 6;
-	u32 test_result, i;
-	CMDQ_VARIABLE cmdq_result;
-	cmdqBackupSlotHandle slot_handle;
+	u32 test_result = 0, i = 0;
+	CMDQ_VARIABLE cmdq_result = 0;
+	cmdqBackupSlotHandle slot_handle = 0;
 	struct TaskStruct *task = NULL;
 	s32 status = 0;
 
@@ -4578,12 +4579,12 @@ static void testcase_read_with_mask(void)
 static void testcase_global_variable(void)
 {
 	s32 status = 0;
-	struct cmdqRecStruct *handle;
-	cmdqBackupSlotHandle slot_handle;
-	u32 cpr_offset;
+	struct cmdqRecStruct *handle = NULL;
+	cmdqBackupSlotHandle slot_handle = 0;
+	u32 cpr_offset = 0;
 	u32 gpr_buffer_size = 2*sizeof(u32);
-	CMDQ_VARIABLE global_x, global_y;
-	u32 test_x, test_y;
+	CMDQ_VARIABLE global_x = 0, global_y = 0;
+	u32 test_x = 0, test_y = 0;
 
 	CMDQ_LOG("%s\n", __func__);
 

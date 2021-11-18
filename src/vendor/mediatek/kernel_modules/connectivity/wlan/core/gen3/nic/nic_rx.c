@@ -152,6 +152,48 @@ static PROCESS_RX_MGT_FUNCTION apfnProcessRxMgtFrame[MAX_NUM_OF_FC_SUBTYPES] = {
 	NULL			/* subtype 1111: reserved */
 };
 #endif
+static const struct ACTION_FRAME_SIZE_MAP arActionFrameReservedLen[] = {
+	{(uint16_t)(CATEGORY_QOS_ACTION | ACTION_QOS_MAP_CONFIGURE << 8),
+	 sizeof(struct _ACTION_QOS_MAP_CONFIGURE_FRAME)},
+	{(uint16_t)(CATEGORY_PUBLIC_ACTION | ACTION_PUBLIC_20_40_COEXIST << 8),
+	 OFFSET_OF(ACTION_20_40_COEXIST_FRAME, rChnlReport)},
+	{(uint16_t)
+	 (CATEGORY_PUBLIC_ACTION | ACTION_PUBLIC_VENDOR_SPECIFIC << 8),
+	 sizeof(WLAN_PUBLIC_VENDOR_ACTION_FRAME)},
+	{(uint16_t)(CATEGORY_HT_ACTION | ACTION_HT_NOTIFY_CHANNEL_WIDTH << 8),
+	 sizeof(ACTION_NOTIFY_CHNL_WIDTH_FRAME)},
+	{(uint16_t)(CATEGORY_HT_ACTION | ACTION_HT_SM_POWER_SAVE << 8),
+	 sizeof(struct ACTION_SM_POWER_SAVE_FRAME)},
+#if CFG_SUPPORT_802_11W
+	{(uint16_t)(CATEGORY_SA_QUERY_ACTION | ACTION_SA_QUERY_REQUEST << 8),
+	 sizeof(ACTION_SA_QUERY_FRAME)},
+#endif
+	{(uint16_t)
+	 (CATEGORY_WNM_ACTION | ACTION_WNM_TIMING_MEASUREMENT_REQUEST << 8),
+	 sizeof(ACTION_WNM_TIMING_MEAS_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_MEASUREMENT_REQ << 8),
+	 sizeof(ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_MEASUREMENT_REPORT << 8),
+	 sizeof(ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_TPC_REQ << 8),
+	 sizeof(ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_TPC_REPORT << 8),
+	 sizeof(ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_CHNL_SWITCH << 8),
+	 sizeof(ACTION_SM_REQ_FRAME)},
+	{(uint16_t)
+	 (CATEGORY_VHT_ACTION | ACTION_OPERATING_MODE_NOTIFICATION << 8),
+	 sizeof(ACTION_OP_MODE_NOTIFICATION_FRAME)},
+	{(uint16_t)(CATEGORY_RM_ACTION | RM_ACTION_RM_REQUEST << 8),
+	 sizeof(ACTION_RM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_RM_ACTION | RM_ACTION_REIGHBOR_RESPONSE << 8),
+	 sizeof(struct ACTION_NEIGHBOR_REPORT_FRAME)},
+	{(uint16_t)(CATEGORY_WME_MGT_NOTIFICATION | ACTION_ADDTS_RSP << 8),
+	 sizeof(struct WMM_ACTION_TSPEC_FRAME)},
+	{(uint16_t)(CATEGORY_WME_MGT_NOTIFICATION | ACTION_DELTS << 8),
+	 sizeof(struct WMM_ACTION_TSPEC_FRAME)},
+};
+
 
 /*******************************************************************************
 *                                 M A C R O S
@@ -2346,14 +2388,16 @@ VOID nicRxProcessEventPacket(IN P_ADAPTER_T prAdapter, IN OUT P_SW_RFB_T prSwRfb
 		if (prAdapter->fgDisBcnLostDetection == FALSE) {
 			P_BSS_INFO_T prBssInfo = (P_BSS_INFO_T) NULL;
 			P_EVENT_BSS_BEACON_TIMEOUT_T prEventBssBeaconTimeout;
+			UINT_8 rssi;
 
 			prEventBssBeaconTimeout = (P_EVENT_BSS_BEACON_TIMEOUT_T) (prEvent->aucBuffer);
+			rssi = RCPI_TO_dBm(prEventBssBeaconTimeout->ucRcpi);
 
 			if (prEventBssBeaconTimeout->ucBssIndex >= BSS_INFO_NUM)
 				break;
 
-			DBGLOG(RX, INFO, "Beacon Timeout Reason: %d, update bad RSSI=-127 to upper layer\n",
-			       prEventBssBeaconTimeout->ucReasonCode);
+			DBGLOG(RX, INFO, "Beacon Timeout Reason: %d, update bad RSSI: %d to upper layer\n",
+			       prEventBssBeaconTimeout->ucReasonCode, rssi);
 #if CFG_SUPPORT_EXCEPTION_STATISTICS
 			prAdapter->total_beacon_timeout_count++;
 			if (prEventBssBeaconTimeout->ucReasonCode >= BEACON_TIMEOUT_TYPE_NUM) {
@@ -4081,6 +4125,42 @@ WLAN_STATUS nicRxFlush(IN P_ADAPTER_T prAdapter)
 	return WLAN_STATUS_SUCCESS;
 }
 
+BOOLEAN nicIsActionFrameValid(IN P_SW_RFB_T prSwRfb)
+{
+	P_WLAN_ACTION_FRAME prActFrame;
+	UINT_16 u2ActionIndex = 0, u2ExpectedLen = 0;
+	UINT_32 u4Idx, u4Size;
+
+	if (prSwRfb->u2PacketLen < sizeof(WLAN_ACTION_FRAME) - 1)
+		return FALSE;
+	prActFrame = (struct WLAN_ACTION_FRAME *) prSwRfb->pvHeader;
+
+	DBGLOG(RSN, TRACE, "Action frame category=%d action=%d\n",
+	       prActFrame->ucCategory, prActFrame->ucAction);
+
+	u2ActionIndex = prActFrame->ucCategory | prActFrame->ucAction << 8;
+	u4Size = sizeof(arActionFrameReservedLen) /
+		 sizeof(struct ACTION_FRAME_SIZE_MAP);
+	for (u4Idx = 0; u4Idx < u4Size; u4Idx++) {
+		if (u2ActionIndex == arActionFrameReservedLen[u4Idx].u2Index) {
+			u2ExpectedLen = (uint16_t)
+				arActionFrameReservedLen[u4Idx].len;
+			DBGLOG(RSN, LOUD,
+				"Found expected len of incoming action frame:%d\n",
+				u2ExpectedLen);
+			break;
+		}
+	}
+	if (u2ExpectedLen != 0 && prSwRfb->u2PacketLen < u2ExpectedLen) {
+		DBGLOG(RSN, INFO,
+			"Received an abnormal action frame: packet len/expected len:%d/%d\n",
+			prSwRfb->u2PacketLen, u2ExpectedLen);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
 /*----------------------------------------------------------------------------*/
 /*!
 * @brief
@@ -4103,7 +4183,7 @@ WLAN_STATUS nicRxProcessActionFrame(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSw
 
 	DBGLOG(RSN, TRACE, "[Rx] nicRxProcessActionFrame\n");
 
-	if (prSwRfb->u2PacketLen < sizeof(WLAN_ACTION_FRAME) - 1)
+	if (!nicIsActionFrameValid(prSwRfb))
 		return WLAN_STATUS_INVALID_PACKET;
 	prActFrame = (P_WLAN_ACTION_FRAME) prSwRfb->pvHeader;
 

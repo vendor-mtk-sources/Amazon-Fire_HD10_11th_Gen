@@ -4133,19 +4133,22 @@ WLAN_STATUS nicSetUapsdParam(IN P_ADAPTER_T prAdapter,
 INT_32 nicUpdateWakeupStatistics(P_ADAPTER_T prAdapter, WAKEUP_TYPE intType)
 {
 	P_WAKEUP_STATISTIC *prWakeupSta = &g_arWakeupStatistic[intType];
-	if (glWlanGetSuspendFlag() == 0)
-		return 0;
-	prWakeupSta->u4Count++;
-	glWlanClearSuspendFlag();
-	if (prWakeupSta->u4Count % 100 == 0) {
-		OS_SYSTIME rCurrent;
-		if (prWakeupSta->u4Count > 0) {
-			GET_CURRENT_SYSTIME(&rCurrent);
-			prWakeupSta->u4TimePerHundred = rCurrent-prWakeupSta->rStartTime;
+#if CFG_SUPPORT_WAKEUP_REASON_DEBUG
+	if (kalIsWakeupByWlan(prAdapter)) {
+		prWakeupSta->u4Count++;
+		if (prWakeupSta->u4Count % 100 == 0) {
+			OS_SYSTIME rCurrent;
+			if (prWakeupSta->u4Count > 0) {
+				GET_CURRENT_SYSTIME(&rCurrent);
+				prWakeupSta->u4TimePerHundred = rCurrent-prWakeupSta->rStartTime;
+			}
+			GET_CURRENT_SYSTIME(&prWakeupSta->rStartTime)
+			DBGLOG(RX, INFO, "wakeup frequency: %u", prWakeupSta->u4TimePerHundred);
 		}
-		GET_CURRENT_SYSTIME(&prWakeupSta->rStartTime)
-		DBGLOG(RX, INFO, "wakeup frequency: %u", prWakeupSta->u4TimePerHundred);
+		return 1;
 	}
-	return 1;
+	else
+#endif
+		return 0;
 }
 #endif

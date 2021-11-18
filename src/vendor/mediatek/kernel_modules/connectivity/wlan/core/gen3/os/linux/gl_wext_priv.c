@@ -57,6 +57,13 @@
 #ifdef ENABLED_IN_ENGUSERDEBUG
 enum UT_TRIGGER_CHIP_RESET trChipReset = TRIGGER_RESET_START;
 #endif
+
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+enum UT_TRIGGER_TX_HANGE_METRIC etrTxHangMetric = TRIGGER_TX_HANG_UT_START;
+#endif
+#endif
+
 #if CFG_SUPPORT_FW_ACTIVE_TIME_STATISTICS
 #define CMD_FW_ACTIVE_STATISTICS   "fw_active_statistics"
 extern struct CMD_FW_ACTIVE_TIME_STATISTICS g_FwActiveTime;
@@ -69,6 +76,15 @@ extern struct WIFI_ON_TIME_STATISTICS wifiOnTimeStatistics;
 
 extern WAKEUP_STATISTIC g_arWakeupStatistic[WAKEUP_TYPE_NUM];
 extern UINT_32 g_wake_event_count[EVENT_ID_END];
+
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+extern UINT_32 totalBeacontimeoutCntScreenOffAb;
+extern UINT_32 totalBeacontimeoutCntScreenOffBl;
+extern UINT_32 totalBeacontimeoutCntScreenOnAb;
+extern UINT_32 totalBeacontimeoutCntScreenOnBl;
+extern UINT_32 totalBeacontimeoutRealCnt;
+#endif
+
 
 extern void updateWifiOnTimeStatistics(void);
 /*******************************************************************************
@@ -810,6 +826,16 @@ _priv_set_int(IN struct net_device *prNetDev,
 			trChipReset = (enum UT_TRIGGER_CHIP_RESET)pu4IntBuf[1];
 		}
 		break;
+#endif
+
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+	case PRIV_CMD_TRIGGER_TX_HANG_METRIC:
+		{
+			etrTxHangMetric = (enum UT_TRIGGER_TX_HANGE_METRIC)pu4IntBuf[1];
+		}
+		break;
+#endif
 #endif
 
 	case PRIV_CMD_WMM_PS:
@@ -2315,7 +2341,14 @@ priv_get_string(IN struct net_device *prNetDev,
 		INT_32 i4Rssi;
 		UINT_32 u4Rate = 0;
 		INT_8 noise = 0;
-
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+		UINT_32 u4BcnTimeoutCntScreenOffAb;
+		UINT32	u4BcnTimeoutCntScreenOffBl;
+		UINT_32 u4BcnTimeoutCntScreenOnAb;
+		UINT32  u4BcnTimeoutCntScreenOnBl;
+		UINT_32 u4BcnTimeoutRealCnt;
+		struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS rCmdFwBeacontimeoutCntStatistics;
+#endif
 		PARAM_MAC_ADDRESS arBssid;
 		PARAM_SSID_T ssid;
 		P_BSS_INFO_T prBssInfo;
@@ -2346,7 +2379,6 @@ priv_get_string(IN struct net_device *prNetDev,
 			     (PVOID)aucBuffer, sizeof(UINT_8) * 512,
 			     TRUE, TRUE, TRUE,
 			     &u4BufLen) == WLAN_STATUS_SUCCESS) {
-
 			if (pSwDbgCtrl && prRxCtrl) {
 				if (pSwDbgCtrl->u4Data == SWCR_DBG_TYPE_ALL) {
 					pos += scnprintf(buf + pos, u4TotalLen - pos,
@@ -2383,9 +2415,36 @@ priv_get_string(IN struct net_device *prNetDev,
 
 					pos += scnprintf(buf + pos, u4TotalLen - pos,
 						    "False CCA(one-second) =\n");
-				}
+					}
 			}
 		}
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+		kalMemZero(&rCmdFwBeacontimeoutCntStatistics, sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS));
+		if (kalIoctl(prGlueInfo, wlanoidGetFwBeacontimeoutCntStatistics,
+				&rCmdFwBeacontimeoutCntStatistics,
+				sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS),
+				TRUE, TRUE, TRUE, &u4BufLen) == WLAN_STATUS_SUCCESS) {
+			u4BcnTimeoutCntScreenOffAb = totalBeacontimeoutCntScreenOffAb + rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffAb;
+			u4BcnTimeoutCntScreenOffBl = totalBeacontimeoutCntScreenOffBl + rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffBl;
+			u4BcnTimeoutCntScreenOnAb = totalBeacontimeoutCntScreenOnAb + rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnAb;
+			u4BcnTimeoutCntScreenOnBl = totalBeacontimeoutCntScreenOnBl + rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnBl;
+			u4BcnTimeoutRealCnt = totalBeacontimeoutRealCnt + rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutRealCnt;
+
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "can config the RssiTh by BeaconTimeoutRcpiTh in wifi.cfg\n");
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "HW BT in screen on rssi>-70 cnt = %u\n",
+							u4BcnTimeoutCntScreenOnAb);
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "HW BT in screen on rssi<-70 cnt = %u\n",
+					u4BcnTimeoutCntScreenOnBl);
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "HW BT in screen off rssi>-70 cnt = %u\n",
+					u4BcnTimeoutCntScreenOffAb);
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "HW BT in screen off rssi<-70 cnt = %u\n",
+					u4BcnTimeoutCntScreenOffBl);
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "Real BT to driver cnt = %u\n",
+					u4BcnTimeoutRealCnt);
+		}
+		else
+			pos += scnprintf(buf + pos, u4TotalLen - pos, "can't get the beacnotimeout cnt\n");
+#endif
 
 		if (kalIoctl(prGlueInfo, wlanoidQueryRssi, &i4Rssi, sizeof(i4Rssi),
 				TRUE, TRUE, TRUE, &u4BufLen) == WLAN_STATUS_SUCCESS) {

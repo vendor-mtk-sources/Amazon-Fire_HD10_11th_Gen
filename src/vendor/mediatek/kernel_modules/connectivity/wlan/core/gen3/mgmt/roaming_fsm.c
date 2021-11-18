@@ -332,6 +332,11 @@ VOID roamingFsmSteps(IN P_ADAPTER_T prAdapter, IN ENUM_ROAMING_STATE_T eNextStat
 			{
 				OS_SYSTIME rCurrentTime;
 				BOOLEAN fgIsNeedScan = FALSE;
+				P_AIS_SPECIFIC_BSS_INFO_T prAisSpecBssInfo = &prAdapter->rWifiVar.rAisSpecificBssInfo;
+				struct LINK_MGMT *prAPlist = &prAisSpecBssInfo->rNeighborApList;
+
+				if ((!LINK_IS_EMPTY(&(prAPlist->rUsingLink))) && prRoamingFsmInfo->eRoaming_type != ROAMING_11V)
+					prRoamingFsmInfo->eRoaming_type = ROAMING_11K;
 
 				cnmTimerStopTimer(prAdapter, &prRoamingFsmInfo->rWaitCandidateTimer);
 				fgIsNeedScan = roamingFsmIsNeedScan(prAdapter);
@@ -455,6 +460,8 @@ VOID roamingFsmRunEventDiscovery(IN P_ADAPTER_T prAdapter, IN UINT_32 u4Param)
 			return;
 	} while (0);
 
+	prRoamingFsmInfo->u4RoamingStartTime = (OS_SYSTIME) kalGetTimeTick();
+	prRoamingFsmInfo->eRoaming_type = ROAMING_LEGACY;
 	DBGLOG(ROAMING, EVENT, "EVENT-ROAMING DISCOVERY: Current Time = %u\n", kalGetTimeTick());
 
 	/* DECISION -> DISCOVERY */
@@ -473,8 +480,9 @@ VOID roamingFsmRunEventDiscovery(IN P_ADAPTER_T prAdapter, IN UINT_32 u4Param)
 		prBssDesc = prAdapter->rWifiVar.rAisFsmInfo.prTargetBssDesc;
 		if (prBssDesc) {
 			prBssDesc->ucRCPI = (UINT_8) (u4Param & 0xff);
-			DBGLOG(ROAMING, STATE, "EVENT-ROAMING DISCOVERY: Current Time = %u, RCPI = %d\n",
-				kalGetTimeTick(), prBssDesc->ucRCPI);
+			prRoamingFsmInfo->oldApRssi = RCPI_TO_dBm(prBssDesc->ucRCPI);
+			DBGLOG(ROAMING, STATE, "EVENT-ROAMING DISCOVERY: Current Time = %u, RCPI = %d RSSI = %d\n",
+				kalGetTimeTick(), prBssDesc->ucRCPI, prRoamingFsmInfo->oldApRssi);
 		}
 		roamingFsmSteps(prAdapter, eNextState);
 	}
@@ -539,6 +547,9 @@ VOID roamingFsmRunEventFail(IN P_ADAPTER_T prAdapter, IN UINT_32 u4Param)
 	CMD_ROAMING_TRANSIT_T rTransit;
 
 	prRoamingFsmInfo = (P_ROAMING_INFO_T) &(prAdapter->rWifiVar.rRoamingInfo);
+
+	/* add for fos7*/
+	kalIndicateRoamingMetrics(prAdapter->prGlueInfo);
 
 	/* Check Roaming Conditions */
 	do {

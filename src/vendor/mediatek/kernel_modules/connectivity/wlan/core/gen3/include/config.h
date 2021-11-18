@@ -958,8 +958,18 @@ enum UT_TRIGGER_CHIP_RESET {
 };
 #endif
 
+#define CFG_SUPPORT_GET_BEACONTIMEOUT_CNT 1 /*fos_change online*/
 #define CFG_SUPPORT_FW_ACTIVE_TIME_STATISTICS 1 /*fos_change online*/
 #define CFG_SUPPORT_WLAN_CUSTOMIZE_WMM 1 /*fos_change*/
+#define CFG_NOTIFY_TX_HANG_METRIC	1/*fos_change*/
+
+#if CFG_NOTIFY_TX_HANG_METRIC
+#define CFG_NOTIFY_TX_HANG_METRIC_UT	1/*fos_change*/
+#else
+#define CFG_NOTIFY_TX_HANG_METRIC_UT	0/*fos_change*/
+#endif
+
+
 /*******************************************************************************
 *                             D A T A   T Y P E S
 ********************************************************************************

@@ -13417,3 +13417,34 @@ wlanoidQueryBandWidth(IN P_ADAPTER_T prAdapter,
 	} while (FALSE);
 	return rResult;
 }
+
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+UINT_32
+wlanoidGetFwBeacontimeoutCntStatistics(IN P_ADAPTER_T prAdapter,
+	IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen)
+{
+	struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS rCmdFwBeacontimeoutCntStatistics;
+	UINT_32 rWlanStatus = WLAN_STATUS_SUCCESS;
+
+	ASSERT(prAdapter);
+	ASSERT(pu4QueryInfoLen);
+
+	if (u4QueryBufferLen < sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS))
+		return WLAN_STATUS_INVALID_LENGTH;
+
+	ASSERT(pvQueryBuffer);
+
+	rWlanStatus = wlanSendSetQueryCmd(prAdapter,
+		CMD_ID_GET_BEACONTIMEOUT_STATISTICS,
+		FALSE,
+		TRUE,
+		TRUE,
+		nicCmdEventGetBeacontimeCntStatistics,
+		nicOidCmdTimeoutCommon,
+		sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS),
+		(PUINT_8) &rCmdFwBeacontimeoutCntStatistics, pvQueryBuffer, u4QueryBufferLen);
+
+	return rWlanStatus;
+
+}
+#endif

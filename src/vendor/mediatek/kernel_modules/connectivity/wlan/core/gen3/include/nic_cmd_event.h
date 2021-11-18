@@ -428,6 +428,9 @@ typedef enum _ENUM_CMD_ID_T {
 #if CFG_SUPPORT_FW_ACTIVE_TIME_STATISTICS
 	CMD_ID_FW_ACTIVE_TIME_STATISTICS = 0xc9, /*0xc9 (Set / Query)*/
 #endif
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+	CMD_ID_GET_BEACONTIMEOUT_STATISTICS = 0xCE,
+#endif
 
 	CMD_ID_CHIP_CONFIG = 0xCA,	/* 0xca (Set / Query) */
 	CMD_ID_STATS_LOG = 0xCB,	/* 0xcb (Set) */
@@ -524,7 +527,6 @@ typedef enum _ENUM_EVENT_ID_T {
 #if CFG_RX_BA_REORDERING_ENHANCEMENT
 	EVENT_ID_BA_FW_DROP_SN = 0x51,
 #endif
-
 #if CFG_SUPPORT_MU_MIMO
 	EVENT_ID_MU_GET_QD = 0x53,
 	EVENT_ID_MU_GET_LQ = 0x54,
@@ -1848,7 +1850,8 @@ typedef enum _ENUM_BEACON_TIMEOUT_TYPE_T {
 typedef struct _EVENT_BSS_BEACON_TIMEOUT_T {
 	UINT_8 ucBssIndex;
 	UINT_8 ucReasonCode;
-	UINT_8 aucReserved[2];
+	UINT_8 ucRcpi;
+	UINT_8 aucReserved[1];
 } EVENT_BSS_BEACON_TIMEOUT_T, *P_EVENT_BSS_BEACON_TIMEOUT_T;
 
 typedef struct _EVENT_STA_AGING_TIMEOUT_T {
@@ -2198,7 +2201,6 @@ typedef struct _EVENT_STA_STATISTICS_T {
 	UINT_32 u4TxDoneAirTime;
 	UINT_32 u4TransmitCount;	/* Transmit in the air (wtbl) */
 	UINT_32 u4TransmitFailCount;	/* Transmit without ack/ba in the air (wtbl) */
-
 	WIFI_WMM_AC_STAT_GET_FROM_FW_T arLinkStatistics[AC_NUM];	/*link layer statistics */
 
 	UINT_8 aucReserved[24];
@@ -2403,6 +2405,16 @@ struct EVENT_FW_ACTIVE_TIME_STATISTICS {
 };
 #endif
 
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS {
+	UINT_32 u4BcnTimeoutCntScreenOnAb;
+	UINT_32 u4BcnTimeoutCntScreenOnBl;
+	UINT_32 u4BcnTimeoutCntScreenOffAb;
+	UINT_32 u4BcnTimeoutCntScreenOffBl;
+	UINT_32 u4BcnTimeoutRealCnt;
+};
+#endif
+
 /*******************************************************************************
 *                            P U B L I C   D A T A
 ********************************************************************************
@@ -2530,6 +2542,12 @@ VOID nicOidCmdTimeoutSetAddKey(IN P_ADAPTER_T prAdapter, IN P_CMD_INFO_T prCmdIn
 #endif
 #if CFG_SUPPORT_FW_ACTIVE_TIME_STATISTICS
 void nicCmdEventGetFwActiveTimeStatistics(IN P_ADAPTER_T prAdapter,
+	IN P_CMD_INFO_T prCmdInfo,
+	IN PUINT_8 pucEventBuf);
+#endif
+
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+void nicCmdEventGetBeacontimeCntStatistics(IN P_ADAPTER_T prAdapter,
 	IN P_CMD_INFO_T prCmdInfo,
 	IN PUINT_8 pucEventBuf);
 #endif

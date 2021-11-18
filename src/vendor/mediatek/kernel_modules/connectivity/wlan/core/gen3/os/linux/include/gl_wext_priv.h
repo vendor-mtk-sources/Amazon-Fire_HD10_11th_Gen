@@ -135,6 +135,12 @@
 
 #define PRIV_CMD_GET_BAND_WITH           44
 
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+#define PRIV_CMD_TRIGGER_TX_HANG_METRIC 45
+#endif
+#endif
+
 #if CFG_SUPPORT_QA_TOOL
 #define PRIV_QACMD_SET                  29
 #endif

@@ -71,6 +71,11 @@ char idme_board_id[17];
 unsigned int g_board_type;
 #endif
 
+#if CFG_NOTIFY_TX_HANG_METRIC
+INT_8 ucAbSence = 0;
+INT_8 ucPidOverflow = 0;
+#endif
+
 static struct wireless_dev *gprWdev;
 BOOLEAN fgNvramAvailable;
 UINT_8 g_aucNvram[CFG_FILE_WIFI_REC_SIZE];
@@ -279,6 +284,13 @@ static UINT_32 u4WlanDevNum;	/* How many NICs coexist now */
 /**20150205 added work queue for sched_scan to avoid cfg80211 stop schedule scan dead loack**/
 struct delayed_work sched_workq;
 
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+UINT_32 totalBeacontimeoutCntScreenOffAb = 0;
+UINT_32 totalBeacontimeoutCntScreenOffBl = 0;
+UINT_32 totalBeacontimeoutCntScreenOnAb = 0;
+UINT_32 totalBeacontimeoutCntScreenOnBl = 0;
+UINT_32 totalBeacontimeoutRealCnt = 0;
+#endif
 /*******************************************************************************
 *                           P R I V A T E   D A T A
 ********************************************************************************
@@ -566,6 +578,10 @@ static const struct nl80211_vendor_cmd_info mtk_wlan_vendor_events[] = {
 	{
 		.vendor_id = GOOGLE_OUI,
 		.subcmd = WIFI_EVENT_RSSI_MONITOR
+	},
+	{
+		.vendor_id = OUI_AMAZON,
+		.subcmd = AMZN_NL80211_VENDOR_SUBCMD_ROAMING_INFO
 	},
 };
 
@@ -2913,6 +2929,61 @@ static void wlanBackupFwActiveTimeStatistics(void)
 }
 #endif
 
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+static void wlanBackupFwBeacontimeCntStatistics(void)
+{
+	struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS rCmdFwBeacontimeoutCntStatistics;
+	UINT_32 u4BufLen = 0;
+	UINT_32 rStatus = WLAN_STATUS_SUCCESS;
+	struct net_device *prDev = NULL;
+	P_GLUE_INFO_T prGlueInfo = NULL;
+
+	if ((u4WlanDevNum == 0) ||
+		(u4WlanDevNum > CFG_MAX_WLAN_DEVICES)) {
+		return;
+	}
+
+	prDev = arWlanDevInfo[u4WlanDevNum - 1].prDev;
+	if (!prDev)
+		return;
+
+	prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prDev));
+	if (!prGlueInfo)
+		return;
+	kalMemZero(&rCmdFwBeacontimeoutCntStatistics, sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS));
+
+	rStatus = kalIoctl(prGlueInfo, wlanoidGetFwBeacontimeoutCntStatistics,
+		&rCmdFwBeacontimeoutCntStatistics,
+		sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS),
+		TRUE, TRUE, TRUE, &u4BufLen);
+
+	/*update driver beacontimeout cnt*/
+	if (WLAN_STATUS_SUCCESS == rStatus) {
+		totalBeacontimeoutCntScreenOffAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffAb;
+		totalBeacontimeoutCntScreenOffBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffBl;
+		totalBeacontimeoutCntScreenOnAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnAb;
+		totalBeacontimeoutCntScreenOnBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnBl;
+		totalBeacontimeoutRealCnt += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutRealCnt;
+	}
+	else
+		DBGLOG(REQ, WARN, "unable to get beacontimeout cnt ,status code = %d\n", rStatus);
+}
+
+static void wlanCustomizeBeacontimeoutTh(P_ADAPTER_T prAdapter)
+{
+	char *cmdBuffer = NULL;
+	cmdBuffer = kalMemAlloc(CMD_FORMAT_V1_LENGTH, VIR_MEM_TYPE);
+	if (cmdBuffer) {
+		kalMemZero(cmdBuffer, CMD_FORMAT_V1_LENGTH);
+		wlanCfgFwSetParam(cmdBuffer, "BeacontimeoutRcpiTh", "80", 0, 1);
+		DBGLOG(INIT, INFO, "Customize BeacontimeoutRcpiTh parameters\n");
+		kalMemFree(cmdBuffer, VIR_MEM_TYPE, CMD_FORMAT_V1_LENGTH);
+	}
+}
+#endif
+
+
+
 #if CFG_SUPPORT_WLAN_CUSTOMIZE_WMM
 static void wlanCustomizeWmm(P_ADAPTER_T prAdapter)
 {
@@ -3292,6 +3363,10 @@ static INT_32 wlanProbe(PVOID pvData)
 #if CFG_SUPPORT_WLAN_CUSTOMIZE_WMM
 		wlanCustomizeWmm(prGlueInfo->prAdapter);
 #endif
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+		wlanCustomizeBeacontimeoutTh(prGlueInfo->prAdapter);
+#endif
+
 		/* Init performance monitor structure */
 		kalPerMonInit(prGlueInfo);
 #if CFG_SUPPORT_AGPS_ASSIST
@@ -3366,11 +3441,16 @@ static INT_32 wlanProbe(PVOID pvData)
 		}
 	}
 #endif
+#if CFG_NOTIFY_TX_HANG_METRIC
+	if (WLAN_STATUS_SUCCESS == i4Status) {
+		ucAbSence = 1;
+		ucPidOverflow = 1;
+	}
+#endif
 
 	/*update lastUpdateTime*/
 	GET_CURRENT_SYSTIME(&(wifiOnTimeStatistics.lastUpdateTime));
 	DBGLOG(INIT, LOUD, "only need to update lastUpdateTime when wifi on\n");
-
 	return i4Status;
 }				/* end of wlanProbe() */
 
@@ -3426,6 +3506,11 @@ static VOID wlanRemove(VOID)
 		free_netdev(prDev);
 		return;
 	}
+
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+	wlanBackupFwBeacontimeCntStatistics();
+#endif
+
 #if CFG_SUPPORT_WIFI_POWER_DEBUG
 	power_supply_unreg_notifier(&wlan_psy_nb);
 #endif

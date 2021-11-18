@@ -172,6 +172,12 @@ static const struct iw_priv_args rIwPrivTable[] = {
 	{PRIV_CMD_TRIGGER_CHIP_RESET, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0,
 		"set_chip_reset_ut"},
 #endif
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+	{PRIV_CMD_TRIGGER_TX_HANG_METRIC, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0,
+		"tx_metric_ut"},
+#endif
+#endif
 };
 
 static const iw_handler rIwPrivHandler[] = {

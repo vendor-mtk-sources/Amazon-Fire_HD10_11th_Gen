@@ -603,6 +603,8 @@ static void proc_dump_dtsi(struct seq_file *m)
 	seq_puts(m, "********** dump DTSI **********\n");
 	seq_printf(m, "DIFFERENCE_FULLOCV_ITH = %d\n",
 		fg_cust_data.difference_fullocv_ith);
+	seq_printf(m, "DIFFERENCE_FULLOCV_VTH = %d\n",
+		fg_cust_data.difference_fullocv_vth);
 	seq_printf(m, "Q_MAX_SYS_VOLTAGE_BAT = %d\n",
 		fg_cust_data.q_max_sys_voltage);
 

@@ -43,6 +43,9 @@
 */
 #define GOOGLE_OUI 0x001A11
 #define OUI_QCA 0x001374
+#define OUI_AMAZON 0x007147
+
+
 
 typedef enum {
 	/* Don't use 0 as a valid subcommand */
@@ -98,6 +101,12 @@ enum QCA_NL80211_VENDOR_SUBCMDS {
 	QCA_NL80211_VENDOR_SUBCMD_ROAMING = 0x0009,
 };
 
+enum amzn_nl80211_vendor_subcmds {
+	AMZN_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
+	AMZN_NL80211_VENDOR_SUBCMD_ROAMING_INFO = 1,
+};
+
+
 typedef enum {
 	GSCAN_SUBCMD_GET_CAPABILITIES = ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START,
 
@@ -144,7 +153,8 @@ typedef enum {
 	RTT_EVENT_COMPLETE,
 	GSCAN_EVENT_COMPLETE_SCAN,
 	GSCAN_EVENT_HOTLIST_RESULTS_LOST,
-	WIFI_EVENT_RSSI_MONITOR
+	WIFI_EVENT_RSSI_MONITOR,
+	WIFI_EVENT_ROANING_METRICS
 } WIFI_VENDOR_EVENT;
 
 typedef enum {
@@ -755,6 +765,32 @@ struct PARAM_BSS_MAC_OUI {
 	uint8_t ucMacOui[MAC_OUI_LEN];
 };
 
+#if CFG_SUPPORT_ROAMING
+typedef enum _ENUM_ROAMING_STATUS_T {
+	 ROAMING_SUCCESS = 0,
+	 ROAMING_CURRENT_IS_BEST,
+	 ROAMING_AUTH_FAIL,
+	 ROAMING_ASSOC_FAIL,
+	 ROAMING_SINGLE_AP,
+	 ROAMING_NUM
+ } ENUM_ROAMING_STATUS_T, *P_ENUM_ROAMIGN_STATUS_T;
+
+typedef enum _ENUM_ROAMING_TYPE_T {
+	 ROAMING_LEGACY = 0,
+	 ROAMING_11K,
+	 ROAMING_11V,
+	 ROAMING_TYPE
+ } ENUM_ROAMING_TYPE_T, *P_ENUM_ROAMIGN_TYPE_T;
+
+typedef struct {
+	OS_SYSTIME u4RoamingTime;
+	UINT_8 ucHasRoamingScan;
+	UINT_8 eRoamingStatus;
+	UINT_8 roaming_type;
+	INT_8  oldApRssi;
+} PARAM_ROAMING_INFO_EVENT;
+#endif
+
 /*******************************************************************************
 *                                 M A C R O S
 ********************************************************************************
@@ -853,5 +889,8 @@ int mtk_cfg80211_vendor_get_supported_feature_set(
 	const void *data, int data_len);
 int mtk_cfg80211_vendor_set_scan_mac_oui(struct wiphy *wiphy,
 				struct wireless_dev *wdev, const void *data, int data_len);
+#if CFG_SUPPORT_ROAMING
+int mtk_cfg80211_vendor_event_roaming_info(P_GLUE_INFO_T prGlueInfo);
+#endif
 
 #endif /* _GL_VENDOR_H */

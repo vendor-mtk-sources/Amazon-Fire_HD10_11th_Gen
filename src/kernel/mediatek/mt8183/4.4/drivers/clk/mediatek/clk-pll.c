@@ -267,9 +267,10 @@ static int mtk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 pcw = 0;
 	u32 postdiv;
 	unsigned long rate_div = 0;
+	const char *name = __clk_get_name(hw->clk);
 
 	/* if univpll, rate << 1 for analog div 2 */
-	if (!strcmp(__clk_get_name(hw->clk), "univpll"))
+	if (name != NULL && !strcmp(name, "univpll"))
 		rate_div = rate * UNIVPLL_DIV;
 	#if 0
 	else if ((!strcmp(__clk_get_name(hw->clk), "apll1")) || (!strcmp(__clk_get_name(hw->clk), "apll2")))
@@ -289,6 +290,7 @@ static unsigned long mtk_pll_recalc_rate(struct clk_hw *hw,
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 	u32 postdiv, analogdiv;
 	u32 pcw;
+	const char *name = __clk_get_name(hw->clk);
 
 	postdiv = (readl(pll->pd_addr) >> pll->data->pd_shift) & POSTDIV_MASK;
 	postdiv = 1 << postdiv;
@@ -299,7 +301,7 @@ static unsigned long mtk_pll_recalc_rate(struct clk_hw *hw,
 	/* return after analogdiv */
 	/* if univpll, analogdiv = 2 */
 	/* if apll1/apll2, analogdiv = 4 */
-	if (!strcmp(__clk_get_name(hw->clk), "univpll"))
+	if (name != NULL && !strcmp(name, "univpll"))
 		analogdiv = UNIVPLL_DIV;
 	#if 0
 	else if ((!strcmp(__clk_get_name(hw->clk), "apll1")) || (!strcmp(__clk_get_name(hw->clk), "apll2")))
@@ -316,13 +318,14 @@ static long mtk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 	u32 pcw = 0;
 	int postdiv, analogdiv;
+	const char *name = __clk_get_name(hw->clk);
 
 	mtk_pll_calc_values(pll, &pcw, &postdiv, rate, *prate);
 
 	/* return after analogdiv */
 	/* if univpll, analogdiv = 2 */
 	/* if apll1/apll2, analogdiv = 4 */
-	if (!strcmp(__clk_get_name(hw->clk), "univpll"))
+	if (name != NULL && !strcmp(name, "univpll"))
 		analogdiv = UNIVPLL_DIV;
 	#if 0
 	else if ((!strcmp(__clk_get_name(hw->clk), "apll1")) || (!strcmp(__clk_get_name(hw->clk), "apll2")))
@@ -337,7 +340,7 @@ static int mtk_pll_prepare(struct clk_hw *hw)
 {
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 	u32 r;
-
+	const char *name = __clk_get_name(hw->clk);
 
 	/*pr_err("[CCF] %s: %s\n", __func__, __clk_get_name(hw->clk));*/
 	if (readl(pll->pwr_addr) & CON0_PWR_ON) {
@@ -345,7 +348,7 @@ static int mtk_pll_prepare(struct clk_hw *hw)
 	} else {
 		/*pr_err("[CCF] %s: %s is power off\n", __func__, __clk_get_name(hw->clk));*/
 #if (defined(CONFIG_MACH_MT6763) || (defined(CONFIG_MACH_MT8183)))
-		if (!strcmp(__clk_get_name(hw->clk), "univpll"))
+		if (name != NULL && !strcmp(name, "univpll"))
 			univpll_192m_en(1);
 #endif
 		r = readl(pll->pwr_addr) | CON0_PWR_ON;
@@ -381,9 +384,10 @@ static void mtk_pll_unprepare(struct clk_hw *hw)
 {
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 	u32 r;
+	const char *name = __clk_get_name(hw->clk);
 
 #if defined(CONFIG_MACH_MT6799) || defined(CONFIG_MACH_MT6759)
-	if (!strcmp(__clk_get_name(hw->clk), "univpll")) {
+	if (name != NULL && !strcmp(name, "univpll")) {
 	} else {
 		if (readl(pll->pwr_addr) & CON0_PWR_ON) {
 			if (pll->data->flags & HAVE_RST_BAR) {
@@ -409,7 +413,7 @@ static void mtk_pll_unprepare(struct clk_hw *hw)
 		}
 	}
 #else
-	if (!strcmp(__clk_get_name(hw->clk), "mainpll")) {
+	if (name != NULL && !strcmp(name, "mainpll")) {
 	} else {
 		if (readl(pll->pwr_addr) & CON0_PWR_ON) {
 			if (pll->data->flags & HAVE_RST_BAR) {
@@ -441,7 +445,7 @@ static void mtk_pll_unprepare(struct clk_hw *hw)
 			r = readl(pll->pwr_addr) & ~CON0_PWR_ON;
 			writel(r, pll->pwr_addr);
 			#if (defined(CONFIG_MACH_MT6763) || (defined(CONFIG_MACH_MT8183)))
-			if (!strcmp(__clk_get_name(hw->clk), "univpll"))
+			if (name != NULL && !strcmp(name, "univpll"))
 				univpll_192m_en(0);
 			#endif
 		}

@@ -93,6 +93,19 @@ BOOLEAN wlan_perf_monitor_force_enable = TRUE;
 #else
 BOOLEAN wlan_perf_monitor_force_enable = FALSE;
 #endif
+
+#if CFG_NOTIFY_TX_HANG_METRIC
+UINT_64 u8AbsenceSysTime = 0;
+BOOLEAN fgStopQueue = FALSE;
+#endif
+
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+extern enum UT_TRIGGER_TX_HANGE_METRIC etrTxHangMetric;
+#endif
+#endif
+
+
 /*******************************************************************************
 *                                 M A C R O S
 ********************************************************************************
@@ -1148,6 +1161,7 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 
 			/* CFG80211 Indication */
 			if (eStatus == WLAN_STATUS_ROAM_OUT_FIND_BEST) {
+				kalIndicateRoamingMetrics(prGlueInfo);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
 				rRoamInfo.bss = bss;
 				rRoamInfo.req_ie = prGlueInfo->aucReqIe;
@@ -1249,7 +1263,7 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 				    prGlueInfo->prDevHandler->name);
 
 		netif_carrier_off(prGlueInfo->prDevHandler);
-
+		prGlueInfo->eParamMediaStateIndicated = PARAM_MEDIA_STATE_DISCONNECTED_LOCALLY;
 		break;
 
 	case WLAN_STATUS_SCAN_COMPLETE:
@@ -1576,6 +1590,9 @@ kalHardStartXmit(struct sk_buff *prSkb, IN struct net_device *prDev, P_GLUE_INFO
 	    >= prGlueInfo->prAdapter->rWifiVar.u4NetifStopTh) {
 		netif_stop_subqueue(prDev, u2QueueIdx);
 
+#if CFG_NOTIFY_TX_HANG_METRIC
+		fgStopQueue = TRUE;
+#endif
 		DBGLOG(TX, INFO,
 		       "Stop subqueue for BSS[%d] QIDX[%d] PKT_LEN[%u] TOT_CNT[%d] PER-Q_CNT[%d]\n",
 			ucBssIndex, u2QueueIdx, prSkb->len,
@@ -1709,6 +1726,10 @@ VOID kalSendCompleteAndAwakeQueue(IN P_GLUE_INFO_T prGlueInfo, IN PVOID pvPacket
 		if (netif_subqueue_stopped(prDev, prSkb) &&
 		    prGlueInfo->ai4TxPendingFrameNumPerQueue[ucBssIndex][u2QueueIdx] <= u4StartTh) {
 			netif_wake_subqueue(prDev, u2QueueIdx);
+
+#if CFG_NOTIFY_TX_HANG_METRIC
+			fgStopQueue = FALSE;
+#endif
 			DBGLOG(TX, INFO,
 			       "WakeUp Queue BSS[%d] QIDX[%d] PKT_LEN[%u] TOT_CNT[%d] PER-Q_CNT[%d]\n",
 				ucBssIndex, u2QueueIdx, prSkb->len,
@@ -2885,6 +2906,9 @@ int tx_thread(void *data)
 	P_GL_IO_REQ_T prIoReq = NULL;
 	int ret = 0;
 	BOOLEAN fgNeedHwAccess = FALSE;
+#if CFG_NOTIFY_TX_HANG_METRIC
+	UINT_64 u8CurrentSysTime;
+#endif
 
 	KAL_WAKELOCK_DECLARE(rTxThreadWakeLock);
 
@@ -2909,6 +2933,30 @@ int tx_thread(void *data)
 		if (test_and_clear_bit(GLUE_FLAG_SUB_MOD_MULTICAST_BIT, &prGlueInfo->ulFlag))
 			p2pSetMulticastListWorkQueueWrapper(prGlueInfo);
 #endif
+#if CFG_NOTIFY_TX_HANG_METRIC
+		u8CurrentSysTime = kalGetBootTime();
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+		/*for ut test begin*/
+		if (etrTxHangMetric == TRIGGER_TX_HANG_UT_OVER_TIME) {
+			u8AbsenceSysTime = 1;
+			u8CurrentSysTime = u8AbsenceSysTime + 130 * USEC_PER_SEC;
+		}
+		else if (etrTxHangMetric == TRIGGER_TX_HANG_UT_STOP_QUEUE) {
+			u8AbsenceSysTime = 1;
+			u8CurrentSysTime = u8AbsenceSysTime + 30 * USEC_PER_SEC;
+			fgStopQueue = TRUE;
+		}
+#endif
+#endif
+		if ((u8AbsenceSysTime != 0) &&
+			(((u8CurrentSysTime - u8AbsenceSysTime) > 120 * USEC_PER_SEC) ||
+			(((u8CurrentSysTime - u8AbsenceSysTime) > 20 * USEC_PER_SEC) &&
+			fgStopQueue))) {
+			wlanNotifyTxHangMetric(FALSE);
+		}
+#endif
+
 
 		if (prGlueInfo->ulFlag & GLUE_FLAG_HALT) {
 			DBGLOG(INIT, TRACE, "%s should stop now...\n", KAL_GET_CURRENT_THREAD_NAME());
@@ -6202,5 +6250,17 @@ VOID kalStatTRxPkts(P_GLUE_INFO_T prGlueInfo, struct sk_buff *prSkb, BOOLEAN fgT
 
 BOOLEAN kalTRxStatsPaused(VOID) {
 	return !wlan_fb_power_down;
+}
+#endif
+/*add roaming metrics for fos7*/
+#if CFG_SUPPORT_ROAMING
+VOID kalIndicateRoamingMetrics(IN P_GLUE_INFO_T prGlueInfo)
+{
+	int u2RoamingMetricStatus = 0;
+
+	u2RoamingMetricStatus = mtk_cfg80211_vendor_event_roaming_info(prGlueInfo);
+	if (u2RoamingMetricStatus != 0)
+		DBGLOG(INIT, INFO, "send roaming success metrics fail status =%d",
+			u2RoamingMetricStatus);
 }
 #endif

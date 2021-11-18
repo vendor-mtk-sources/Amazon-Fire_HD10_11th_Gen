@@ -216,7 +216,7 @@ static ssize_t armpll1_fsel_write(struct file *file, const char __user *buffer,
 				   size_t count, loff_t *data)
 {
 	char desc[32];
-	int len = 0;
+	unsigned int len = 0;
 	unsigned int ctrl_value = 0;
 	int div;
 	unsigned int value = 0;
@@ -247,7 +247,7 @@ static ssize_t armpll2_fsel_write(struct file *file, const char __user *buffer,
 				  size_t count, loff_t *data)
 {
 	char desc[32];
-	int len = 0;
+	unsigned int len = 0;
 	unsigned int ctrl_value = 0;
 	int div;
 	unsigned int value;
@@ -278,7 +278,7 @@ static ssize_t ccipll_fsel_write(struct file *file, const char __user *buffer,
 				    size_t count, loff_t *data)
 {
 	char desc[32];
-	int len = 0;
+	unsigned int len = 0;
 	unsigned int ctrl_value = 0;
 	int div;
 	unsigned int value;
@@ -310,7 +310,7 @@ static ssize_t mmpll_fsel_write(struct file *file, const char __user *buffer,
 				    size_t count, loff_t *data)
 {
 		char desc[32];
-		int len = 0;
+		unsigned int len = 0;
 		unsigned int con0_value, con1_value;
 
 		len = (count < (sizeof(desc) - 1)) ? count : (sizeof(desc) - 1);
@@ -329,7 +329,7 @@ static ssize_t gpupll_fsel_write(struct file *file, const char __user *buffer,
 				    size_t count, loff_t *data)
 {
 		char desc[32];
-		int len = 0;
+		unsigned int len = 0;
 		unsigned int con0_value, con1_value;
 
 		len = (count < (sizeof(desc) - 1)) ? count : (sizeof(desc) - 1);

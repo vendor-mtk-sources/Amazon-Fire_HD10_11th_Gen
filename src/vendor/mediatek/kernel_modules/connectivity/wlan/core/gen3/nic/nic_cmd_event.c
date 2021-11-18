@@ -2224,3 +2224,51 @@ void nicCmdEventGetFwActiveTimeStatistics(IN P_ADAPTER_T prAdapter,
 
 }
 #endif
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+void nicCmdEventGetBeacontimeCntStatistics(IN P_ADAPTER_T prAdapter,
+	IN P_CMD_INFO_T prCmdInfo,
+	IN PUINT_8 pucEventBuf)
+{
+	UINT_32 u4QueryInfoLen;
+	struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS *prFwBeacontimeoutCntStatistics;
+	P_GLUE_INFO_T prGlueInfo;
+	struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS *prEvent;
+
+	ASSERT(prAdapter);
+	ASSERT(prCmdInfo);
+	ASSERT(pucEventBuf);
+
+	DBGLOG(NIC, LOUD, "nicCmdEventGetBeacontimeCntStatistics\n");
+
+	/* 4 <2> Update information of OID */
+	if (prCmdInfo->fgIsOid) {
+		prGlueInfo = prAdapter->prGlueInfo;
+		prEvent = (struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS *) (pucEventBuf);
+		u4QueryInfoLen = sizeof(struct CMD_FW_ACTIVE_TIME_STATISTICS);
+
+		if (prCmdInfo->u4InformationBufferLength < sizeof(struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS)) {
+			DBGLOG(NIC, WARN,
+				"get beacontimeout cnt statistics u4InformationBufferLength %u is not valid (event)\n",
+				prCmdInfo->u4InformationBufferLength);
+			kalOidComplete(prGlueInfo, prCmdInfo->fgSetQuery, u4QueryInfoLen, WLAN_STATUS_SUCCESS);
+			return;
+		}
+		prFwBeacontimeoutCntStatistics = (struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS*) prCmdInfo->pvInformationBuffer;
+		prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOffAb= prEvent->u4BcnTimeoutCntScreenOffAb;
+		prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOnAb= prEvent->u4BcnTimeoutCntScreenOnAb;
+		prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOffBl= prEvent->u4BcnTimeoutCntScreenOffBl;
+		prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOnBl= prEvent->u4BcnTimeoutCntScreenOnBl;
+		prFwBeacontimeoutCntStatistics->u4BcnTimeoutRealCnt = prEvent->u4BcnTimeoutRealCnt;
+		DBGLOG(NIC, LOUD,
+			"screen on Ab [%u] and Bl[%u]\n",
+			prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOnAb,
+			prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOnBl);
+		DBGLOG(NIC, LOUD,
+			"screen off Ab[%u] and Bl[%u]\n",
+			prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOffAb,
+			prFwBeacontimeoutCntStatistics->u4BcnTimeoutCntScreenOffBl);
+		kalOidComplete(prGlueInfo, prCmdInfo->fgSetQuery, u4QueryInfoLen, WLAN_STATUS_SUCCESS);
+	}
+
+}
+#endif

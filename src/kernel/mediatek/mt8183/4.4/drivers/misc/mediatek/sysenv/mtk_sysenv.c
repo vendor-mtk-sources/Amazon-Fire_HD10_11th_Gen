@@ -27,6 +27,7 @@
 #include <net/sock.h>
 #include <linux/netlink.h>
 #include <linux/skbuff.h>
+#include <linux/ctype.h>
 #include "mtk_sysenv.h"
 #include "mtk_partition.h"
 
@@ -153,7 +154,7 @@ fail_malloc:
 static long env_proc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct env_ioctl en_ctl;
-	int ret = 0;
+	int ret = 0, i;
 	u8 *name_buf = NULL;
 	u8 *value_buf = NULL;
 	char *value_r = NULL;
@@ -191,6 +192,12 @@ static long env_proc_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	if (*name_buf == '\0') {
 		ret = 0;
 		goto end;
+	}
+	for (i = 0; name_buf[i] != '\0'; i++) {
+		if (!isascii(name_buf[i])) {
+			ret = -EFAULT;
+			goto end;
+		}
 	}
 	switch (cmd) {
 	case ENV_READ:

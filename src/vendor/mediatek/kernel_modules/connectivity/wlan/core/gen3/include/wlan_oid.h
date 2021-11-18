@@ -1728,6 +1728,15 @@ struct WIFI_ON_TIME_STATISTICS {
 	/*record the last update time*/
 	OS_SYSTIME lastUpdateTime;
 };
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS {
+	UINT_32 u4BcnTimeoutCntScreenOnAb;
+	UINT_32 u4BcnTimeoutCntScreenOnBl;
+	UINT_32 u4BcnTimeoutCntScreenOffAb;
+	UINT_32 u4BcnTimeoutCntScreenOffBl;
+	UINT_32 u4BcnTimeoutRealCnt;
+};
+#endif
 /*******************************************************************************
 *                            P U B L I C   D A T A
 ********************************************************************************
@@ -2532,6 +2541,11 @@ wlanoidSetFwActiveTimeStatistics(IN P_ADAPTER_T prAdapter,
 	IN PVOID pvSetBuffer, IN UINT_32 u4SetBufferLen, OUT PUINT_32 pu4SetInfoLen);
 UINT_32
 wlanoidGetFwActiveTimeStatistics(IN P_ADAPTER_T prAdapter,
+	IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
+#endif
+#if CFG_SUPPORT_GET_BEACONTIMEOUT_CNT
+UINT_32
+wlanoidGetFwBeacontimeoutCntStatistics(IN P_ADAPTER_T prAdapter,
 	IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
 #endif
 

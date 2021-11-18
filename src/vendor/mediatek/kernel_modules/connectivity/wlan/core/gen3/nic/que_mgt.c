@@ -40,6 +40,9 @@
 #include "fwcfg.h"
 #endif
 
+#if CFG_NOTIFY_TX_HANG_METRIC
+extern  UINT_64 u8AbsenceSysTime;
+#endif
 
 /*******************************************************************************
 *                              C O N S T A N T S
@@ -322,11 +325,8 @@ VOID qmInit(IN P_ADAPTER_T prAdapter)
 
 	prQM->u4GlobalResourceUsedCount = 0;
 #endif
-
 	prQM->u4TxAllowedStaCount = 0;
-
 	prQM->rLastTxPktDumpTime = (OS_SYSTIME) kalGetTimeTick();
-
 }
 
 #if QM_TEST_MODE
@@ -2703,7 +2703,8 @@ P_SW_RFB_T qmHandleRxPackets(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfbList
 		}
 #endif
 #if CFG_SUPPORT_FAKE_EAPOL_DETECTION
-		if (qmDetectRxInvalidEAPOL(prAdapter, prCurrSwRfb)) {
+		if (prCurrSwRfb->fgDataFrame && prCurrSwRfb->prStaRec &&
+			qmDetectRxInvalidEAPOL(prAdapter, prCurrSwRfb)) {
 			prCurrSwRfb->eDst = RX_PKT_DESTINATION_NULL;
 			QUEUE_INSERT_TAIL(prReturnedQue, (P_QUE_ENTRY_T) prCurrSwRfb);	
 			DBGLOG(QM, INFO,
@@ -2818,6 +2819,9 @@ u_int8_t qmDetectRxInvalidEAPOL(IN P_ADAPTER_T prAdapter,
 	uint8_t *pucPaylod = NULL;
 	uint16_t u2FrameCtrl;
 	P_WLAN_MAC_HEADER_T  prWlanHeader = NULL;
+
+	ASSERT(prSwRfb);
+	ASSERT(prSwRfb->prStaRec);
 
 	/* return FALSE if no Header Translation*/
 	if (prSwRfb->fgHdrTran == FALSE)
@@ -5358,7 +5362,12 @@ VOID qmHandleEventBssAbsencePresence(IN P_ADAPTER_T prAdapter, IN P_WIFI_EVENT_T
 
 	DBGLOG(QM, INFO, "Bss Absence Presence NAF=%d,%d,%d\n",
 			  prEventBssStatus->ucBssIndex, prBssInfo->fgIsNetAbsent, prBssInfo->ucBssFreeQuota);
-
+#if CFG_NOTIFY_TX_HANG_METRIC
+	if (prBssInfo->fgIsNetAbsent)
+		u8AbsenceSysTime = kalGetBootTime();
+	else
+		u8AbsenceSysTime = 0;
+#endif
 	if (!prBssInfo->fgIsNetAbsent) {
 		/* ToDo:: QM_DBG_CNT_INC */
 		QM_DBG_CNT_INC(&(prAdapter->rQM), QM_DBG_CNT_27);

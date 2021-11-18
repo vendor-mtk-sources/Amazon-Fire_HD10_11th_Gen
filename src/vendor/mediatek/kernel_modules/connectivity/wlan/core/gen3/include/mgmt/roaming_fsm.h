@@ -95,6 +95,11 @@ typedef struct _ROAMING_INFO_T {
 
 	BOOLEAN fgDrvRoamingAllow;
 	TIMER_T rWaitCandidateTimer;
+	OS_SYSTIME u4RoamingStartTime;
+	ENUM_ROAMING_STATUS_T eRoamingStatus;
+	UINT_8 ucHasRoamingScan;
+	ENUM_ROAMING_TYPE_T eRoaming_type;
+	INT_8  oldApRssi;
 #if CFG_SUPPORT_DEBUG_FS
 	CMD_ROAMING_CTRL_T rRoamCtrl;
 #endif

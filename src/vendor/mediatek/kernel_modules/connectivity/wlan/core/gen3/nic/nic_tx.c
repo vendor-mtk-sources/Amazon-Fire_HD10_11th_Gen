@@ -97,6 +97,12 @@ static const TX_TC_TRAFFIC_SETTING_T arTcTrafficSettings[NET_TC_NUM] = {
 	 NIC_TX_DATA_DEFAULT_RETRY_COUNT_LIMIT},
 };
 
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+extern enum UT_TRIGGER_TX_HANGE_METRIC etrTxHangMetric;
+#endif
+#endif
+
 /*******************************************************************************
 *                           P R I V A T E   D A T A
 ********************************************************************************
@@ -1734,6 +1740,12 @@ WLAN_STATUS nicTxMsduQueue(IN P_ADAPTER_T prAdapter, UINT_8 ucPortIdx, P_QUE_T p
 				KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_TXING_MGMT_LIST);
 			} else {
 				prMsduInfo->ucPID = nicTxAssignPID(prAdapter, prMsduInfo->ucWlanIndex | BIT(7));
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+				if (etrTxHangMetric == TRIGGER_TX_HANG_UT_OVER_PID)
+					prMsduInfo->ucPID = 0;
+#endif
+#endif
 				if (prMsduInfo->ucPID > 0) {
 					HAL_MAC_TX_DESC_SET_PID(prTXD, prMsduInfo->ucPID);
 					HAL_MAC_TX_DESC_SET_TXS_TO_MCU(prTXD);
@@ -1743,6 +1755,9 @@ WLAN_STATUS nicTxMsduQueue(IN P_ADAPTER_T prAdapter, UINT_8 ucPortIdx, P_QUE_T p
 				} else {
 					DBGLOG(TX, WARN, "Give up req TX done, handler %p, no PID can be assigned\n",
 					       prMsduInfo->pfTxDoneHandler);
+#if CFG_NOTIFY_TX_HANG_METRIC
+					wlanNotifyTxHangMetric(TRUE);
+#endif
 					if (prMsduInfo->eSrc == TX_PACKET_MGMT)
 						cnmMgtPktFree(prAdapter, prMsduInfo);
 					else

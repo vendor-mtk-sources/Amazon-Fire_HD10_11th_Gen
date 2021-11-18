@@ -99,6 +99,7 @@ struct mtk_battery gm;
 struct fuel_gauge_log_data fg_log_data;
 struct platform_device *batt_platform_dev;
 static int min_battery_temp;
+static bool fgadc_reset;
 
 /* ============================================================ */
 /* gauge hal interface */
@@ -962,6 +963,14 @@ void fg_custom_init_from_dts(struct platform_device *dev)
 			 fg_cust_data.difference_fullocv_ith);
 	} else {
 		bm_err("Get DIFFERENCE_FULLOCV_ITH failed\n");
+	}
+
+	if (!of_property_read_u32(np, "DIFFERENCE_FULLOCV_VTH", &val)) {
+		fg_cust_data.difference_fullocv_vth = (int)val * UNIT_TRANS_10;
+		bm_debug("Get DIFFERENCE_FULLOCV_VTH: %d\n",
+			 fg_cust_data.difference_fullocv_vth);
+	} else {
+		bm_err("Get DIFFERENCE_FULLOCV_VTH failed\n");
 	}
 
 	if (!of_property_read_u32(np, "MTK_CHR_EXIST", &val)) {
@@ -2611,6 +2620,7 @@ int battery_report_uevent(void)
 	char vc_diff_str[ENV_SIZE] = {0};
 	char vc_mode_str[ENV_SIZE] = {0};
 	char quse_str[ENV_SIZE] = {0};
+	char fgadc_reset_str[ENV_SIZE] = {0};
 	char *envp[] = {
 		capacity_str,
 		status_str,
@@ -2628,6 +2638,7 @@ int battery_report_uevent(void)
 		vc_diff_str,
 		vc_mode_str,
 		quse_str,
+		fgadc_reset_str,
 		NULL
 	};
 
@@ -2673,6 +2684,7 @@ int battery_report_uevent(void)
 	snprintf(vc_mode_str, ENV_SIZE, "BATTERY_VC_MODE=%d", d->gm30_vc_mode);
 	snprintf(quse_str, ENV_SIZE, "BATTERY_QUSE=%d",
 		d->gm30_quse_wo_lf_tb1/10);
+	snprintf(fgadc_reset_str, ENV_SIZE, "FGADC_RESET=%d", fgadc_reset);
 
 	kobject_uevent_env(&dev->dev.kobj, KOBJ_CHANGE, envp);
 	bm_err("%s:", __func__);
@@ -3319,6 +3331,9 @@ void bmd_ctrl_cmd_from_user(void *nl_data, struct fgd_nl_msg_t *ret_msg)
 		{
 			bm_err("[fr] fgadc_reset\n");
 			gauge_reset_hw();
+			fgadc_reset = true;
+			battery_report_uevent();
+			fgadc_reset = false;
 		}
 		break;
 	case FG_DAEMON_CMD_SEND_DATA:

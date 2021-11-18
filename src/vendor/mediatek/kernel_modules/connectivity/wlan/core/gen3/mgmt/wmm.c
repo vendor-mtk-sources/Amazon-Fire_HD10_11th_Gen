@@ -942,6 +942,12 @@ wmmParseTspecIE(P_ADAPTER_T prAdapter, PUINT_8 pucIE, P_PARAM_QOS_TSPEC prTspec)
 		P_IE_WMM_TSPEC_T prIeWmmTspec = (P_IE_WMM_TSPEC_T)pucIE;
 		UINT_8 aucWfaOui[] = VENDOR_OUI_WFA;
 
+		/* WMM TSPEC length */
+		if (prIeWmmTspec->ucLength < ELEM_MAX_LEN_WMM_TSPEC) {
+			DBGLOG(WMM, INFO, "Abnormal IE length\n");
+			return FALSE;
+		}
+
 		if (prIeWmmTspec->ucId != ELEM_ID_VENDOR ||
 			 kalMemCmp(prIeWmmTspec->aucOui, aucWfaOui, sizeof(aucWfaOui)) ||
 			 prIeWmmTspec->ucOuiType != VENDOR_OUI_TYPE_WMM ||

@@ -440,6 +440,19 @@ struct DRV_COMMON_WORK_T {
 	spinlock_t rWorkFuncQueLock;
 };
 
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+enum UT_TRIGGER_TX_HANGE_METRIC {
+	TRIGGER_TX_HANG_UT_START,
+	TRIGGER_TX_HANG_UT_OVER_PID,
+	TRIGGER_TX_HANG_UT_OVER_TIME,
+	TRIGGER_TX_HANG_UT_STOP_QUEUE,
+	TRIGGER_TX_HANG_UT_END,
+};
+#endif
+#endif
+
+
 /*******************************************************************************
 *                            P U B L I C   D A T A
 ********************************************************************************
@@ -1243,5 +1256,8 @@ VOID glLogSuspendResumeTime(BOOLEAN fgSuspend);
 BOOLEAN glIsDataStatEnabled(VOID);
 BOOLEAN glIsWakeupLogEnabled(VOID);
 BOOLEAN kalTRxStatsPaused(VOID);
+#endif
+#if CFG_SUPPORT_ROAMING
+VOID kalIndicateRoamingMetrics(IN P_GLUE_INFO_T prGlueInfo);
 #endif
 #endif /* _GL_KAL_H */

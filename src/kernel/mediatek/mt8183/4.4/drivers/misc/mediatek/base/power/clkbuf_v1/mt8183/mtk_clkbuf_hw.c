@@ -1313,11 +1313,12 @@ static void capid_trim_write(uint32_t cap_code)
 }
 
 #define IDME_OF_COTMS_CAL       "/idme/co_tms_cal"
+#define CAL_SIZE 32
 static int clk_buf_set_capid_from_idme(void)
 {
 	struct device_node *np;
 	char *cotms_cal, *data;
-	char buf[32] = { 0 };
+	char buf[CAL_SIZE] = { 0 };
 	uint32_t capid;
 	int ret;
 
@@ -1331,7 +1332,7 @@ static int clk_buf_set_capid_from_idme(void)
 			pr_info("%s, cannot get cotms_cal value\n", __func__);
 			return -EINVAL;
 		} else {
-			strncpy(buf, cotms_cal, sizeof(buf));
+			strncpy(buf, cotms_cal, CAL_SIZE - 1);
 			cotms_cal = buf;
 			pr_info("%s, cotms_cal: %s\n", __func__, cotms_cal);
 		}

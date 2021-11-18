@@ -1080,5 +1080,5 @@ extern QUE_MGT_T g_rQM;
 #endif
 extern const UINT_8 aucTid2ACI[TX_DESC_TID_NUM];
 extern const UINT_8 arNetwork2TcResource[HW_BSSID_NUM + 1][NET_TC_NUM];
-
 #endif /* _QUE_MGT_H */
+

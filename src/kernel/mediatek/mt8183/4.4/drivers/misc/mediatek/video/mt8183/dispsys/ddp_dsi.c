@@ -4552,9 +4552,9 @@ void ddp_dsi_write_lcm_register_cmdq(enum DISP_MODULE_ENUM module,
 	UINT32 i;
 	int dsi_i = 0;
 	unsigned long goto_addr, mask_para, set_para;
-	struct DSI_T0_INS t0;
+	struct DSI_T0_INS t0 = {0};
 	/* DSI_T1_INS t1; */
-	struct DSI_T2_INS t2;
+	struct DSI_T2_INS t2 = {0};
 	unsigned char data_id, cmd, count;
 	unsigned char *para_list;
 

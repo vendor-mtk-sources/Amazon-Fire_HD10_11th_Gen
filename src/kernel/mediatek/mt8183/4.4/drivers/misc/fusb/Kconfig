@@ -1,0 +1,7 @@
+config FUSB251
+   tristate "fusb251 driver"
+   depends on I2C
+   default n
+   help
+     Say Y here to enable support for type-c CC and SBU protection
+     IC FUSB251.

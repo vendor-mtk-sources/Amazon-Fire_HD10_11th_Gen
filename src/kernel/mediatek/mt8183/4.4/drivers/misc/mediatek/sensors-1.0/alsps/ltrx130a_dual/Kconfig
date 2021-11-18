@@ -1,0 +1,3 @@
+config MTK_LTRX130A_DUAL
+	bool "ltrx130a alsps sensor for MediaTek package"
+	default n

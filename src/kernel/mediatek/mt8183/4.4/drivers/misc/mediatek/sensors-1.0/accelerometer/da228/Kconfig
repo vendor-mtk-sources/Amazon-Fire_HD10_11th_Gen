@@ -1,0 +1,5 @@
+config MTK_DA228
+	bool "DA228 for MediaTek package"
+	default n
+	help
+		If this option is set, It will support miramems da228 Accelerometer.

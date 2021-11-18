@@ -1,0 +1,10 @@
+menu "Amazon dsp framework driver"
+
+config AMAZON_DSP_FRAMEWORK
+	tristate "adf support"
+	default n
+	help
+		support adf;
+
+endmenu
+

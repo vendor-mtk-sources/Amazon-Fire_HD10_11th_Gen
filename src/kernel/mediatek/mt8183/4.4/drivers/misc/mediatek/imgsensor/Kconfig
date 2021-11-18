@@ -1,0 +1,14 @@
+config MTK_IMGSENSOR
+  bool CONFIG_MTK_IMGSENSOR
+  default n
+  help
+    CONFIG_MTK_IMGSENSOR
+
+config CAM_AVDD_SRC_SWITCH
+	bool "LDO/ PMIC switching for RFC AVDD source switching"
+	default n
+	help
+	  CONFIG_CAM_AVDD_SRC_SWITCH define if RFC AVDD source need to switch should be built in or
+	  not.
+
+source "drivers/misc/mediatek/imgsensor/src/Kconfig"

@@ -1,0 +1,26 @@
+config MTK_THERMAL_PA_VIA_ATCMD
+	bool "Thermal switch for query modem RF temp"
+	help
+	  Internal switch for thermal management
+	  to query modem RF temperature
+	  via AT command.
+	  (RIL sockets)
+
+config CLATM_CHOOSE_HIGHER_TARGET_TJ
+	bool "adaptive cooler will choose the one who has higher target Tj"
+	help
+	  Change ATM decide TTj logic.
+	  It will choose the adaptive cooler with higher Target Tj
+	  and use the higher trip point as target Tj
+	  when more than one adaptive active.
+	default n
+
+config VS_BACKLIGHT_COOLER
+	bool "Virtual Sensor backlight cooler"
+	default n
+
+config VS_BCCT_COOLER
+	bool "Virtual Sensor battery current cooler"
+	default n
+
+source "drivers/misc/mediatek/thermal/common/thermal_zones/Kconfig"

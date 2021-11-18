@@ -1,0 +1,9 @@
+#
+# thermal driver configuration
+#
+
+config THERMAL_BTS_AMP
+	bool "WPC area thermal monitor"
+	depends on THERMAL
+	help
+		Enable driver to monitor thermistor around Smart AMP & SPK AMP area.

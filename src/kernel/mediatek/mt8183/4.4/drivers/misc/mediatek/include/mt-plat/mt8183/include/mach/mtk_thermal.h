@@ -126,6 +126,9 @@ extern int get_hw_bts_temp_export(int aux_channel, int level);
 #else
 extern int get_hw_bts_temp_export(int aux_channel);
 #endif
+#ifdef CONFIG_AMAZON_LD_SWITCH
+extern int mtkts_bts2_get_hw_temp(void);
+#endif
 extern int get_immediate_ts1_wrap(void);
 
 extern int get_immediate_ts2_wrap(void);

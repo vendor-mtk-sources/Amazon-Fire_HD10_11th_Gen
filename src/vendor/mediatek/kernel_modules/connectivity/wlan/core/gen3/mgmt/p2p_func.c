@@ -1959,12 +1959,13 @@ VOID p2pFuncValidateRxActionFrame(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRf
 
 		switch (prActFrame->ucCategory) {
 		case CATEGORY_PUBLIC_ACTION:
-			if (prActFrame->ucAction != 0x9)
+			if (prActFrame->ucAction != 0x9 ||
+				prSwRfb->u2PacketLen <
+				sizeof(WLAN_PUBLIC_VENDOR_ACTION_FRAME))
 				break;
 			WLAN_GET_FIELD_BE32(prActFrame->ucActionDetails, &u4OUI);
 			DBGLOG(P2P, TRACE, "Action: oui: 0x%x\n", u4OUI);
-			if (u4OUI != P2P_IE_VENDOR_TYPE ||
-			    prSwRfb->u2PacketLen < sizeof(WLAN_PUBLIC_VENDOR_ACTION_FRAME))
+			if (u4OUI != P2P_IE_VENDOR_TYPE)
 				break;
 
 			prActPubVenFrame = (P_WLAN_PUBLIC_VENDOR_ACTION_FRAME) prActFrame;

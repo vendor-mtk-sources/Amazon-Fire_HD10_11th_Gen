@@ -37,11 +37,11 @@ int g_test = 1;
 static struct kobject *fts_touchscreen_link;
 
 static unsigned char CTPM_FW_LENS[] = {
-#include "Suez_R9662_5726_0x6D_V0x83_20161104_app.h"
+#include "abc123_R9662_5726_0x6D_V0x83_20161104_app.h"
 };
 
 static unsigned char CTPM_FW_TopGroup[] = {
-#include "Suez_R9662_5726_0x3E_V0x84_20161110_app.h"
+#include "abc123_R9662_5726_0x3E_V0x84_20161110_app.h"
 };
 
 /************************************************************************

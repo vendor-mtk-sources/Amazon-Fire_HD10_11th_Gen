@@ -793,6 +793,7 @@
 /* 3 Management frame body components (II): Information Elements. */
 /* 7.3.2 Element IDs of information elements */
 #define ELEM_HDR_LEN                                2
+#define RRM_CAPABILIITY_IE_LEN			    5
 
 #define ELEM_ID_SSID                                0	/* SSID */
 #define ELEM_ID_SUP_RATES                           1	/* Supported rates */

@@ -1,0 +1,9 @@
+
+config MTK_CMC306A_NEW
+	bool "CMC306A for MediaTek package"
+	default n
+	help
+	  It support different magnetometer sensor.
+          If this option is set,
+	  it will support
+          CMC306A magnetometer.

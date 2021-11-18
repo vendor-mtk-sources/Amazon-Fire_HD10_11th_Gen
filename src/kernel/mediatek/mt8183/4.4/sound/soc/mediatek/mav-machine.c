@@ -810,6 +810,15 @@ static struct snd_soc_dai_link mt_soc_dai_common[] = {
 		.codec_name = "snd-soc-dummy",
 	},
 #endif
+	{
+		.name = "HW_MERGE",
+		.stream_name = MT_SOC_HW_MERGR_STREAM_NAME,
+		.cpu_dai_name   = MT_SOC_HW_MERGR_DAI_NAME,
+		.platform_name  = MT_SOC_HW_MERGE_PCM,
+		.codec_dai_name = MT_SOC_CODEC_RXDAI2_NAME,
+		.codec_name = MT_SOC_CODEC_NAME,
+	},
+
 };
 
 static struct snd_soc_dai_link mt_soc_exthp_dai[] = {

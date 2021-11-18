@@ -153,4 +153,6 @@ source "drivers/input/touchscreen/mediatek/NT36523/Kconfig"
 
 source "drivers/input/touchscreen/mediatek/NT36xxx/Kconfig"
 
+source "drivers/input/touchscreen/mediatek/FT8201AB/Kconfig"
+
 endif

@@ -95,7 +95,7 @@ struct cust_mt65xx_led *pled_dtsi;
 
 
 #ifdef CONFIG_NORMALIZE_PANEL_BRIGHTNESS_SUPPORT
-#define CUST_MAX_PANEL_NUM (9)
+#define CUST_MAX_PANEL_NUM (10)
 #define CUST_NORM_PARAM_SIZE (4)
 unsigned int leds_normalize_enable;
 static unsigned int leds_chosen_id = 0xFF;

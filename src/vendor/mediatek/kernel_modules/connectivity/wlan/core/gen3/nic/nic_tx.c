@@ -1757,6 +1757,7 @@ WLAN_STATUS nicTxMsduQueue(IN P_ADAPTER_T prAdapter, UINT_8 ucPortIdx, P_QUE_T p
 					       prMsduInfo->pfTxDoneHandler);
 #if CFG_NOTIFY_TX_HANG_METRIC
 					wlanNotifyTxHangMetric(TRUE);
+					GL_WLAN_RESET_TRIGGER();
 #endif
 					if (prMsduInfo->eSrc == TX_PACKET_MGMT)
 						cnmMgtPktFree(prAdapter, prMsduInfo);

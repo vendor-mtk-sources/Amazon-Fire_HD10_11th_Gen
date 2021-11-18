@@ -63,7 +63,7 @@ obj-y += mtk-soc-pcm-dl1-awb.o mtk-soc-pcm-dl1-bt.o mtk-soc-pcm-bt-dai.o
 obj-y += mtk-soc-dai-stub.o mtk-soc-dai-routing.o mtk-soc-codec-dummy.o mtk-soc-pcm-fmtx.o mtk-soc-tdm-capture.o
 obj-y += mtk-soc-pcm-hp-impedance.o
 obj-$(CONFIG_MTK_VOW_BARGE_IN_SUPPORT) += mtk-soc-pcm-vow-barge-in.o
-ifneq ($(CONFIG_ARCH_MTK_PROJECT),$(filter $(CONFIG_ARCH_MTK_PROJECT), "maverick" "trona"))
+ifneq ($(CONFIG_ARCH_MTK_PROJECT),$(filter $(CONFIG_ARCH_MTK_PROJECT), "maverick" "trona" "pinnacles"))
 obj-y += mtk-soc-machine.o
 endif
 endif

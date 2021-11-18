@@ -4308,8 +4308,8 @@ static int Ext_Speaker_Amp_Get(struct snd_kcontrol *kcontrol, struct snd_ctl_ele
 static int Ext_Speaker_Amp_Set(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
 	int retval;
-	pr_aud("%s() switch = %ld\n ", __func__, ucontrol->value.integer.value[0]);
-	if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0) {
+	if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0
+		|| strcmp(CONFIG_ARCH_MTK_PROJECT, "pinnacles") == 0) {
 		retval = AudDrv_GPIO_EXT_SPK_AMP_Select(ucontrol->value.integer.value[0],
 		mCodec_data->mAudio_Ana_Volume[AUDIO_ANALOG_VOLUME_EXT_SPK_AMP]);
 		if (retval == 0)
@@ -7063,7 +7063,8 @@ static void ADC_LOOP_DAC_Off(void)
 
 	if (mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] == true) {
 		mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] = false;
-		if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0)
+		if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0
+			|| strcmp(CONFIG_ARCH_MTK_PROJECT, "pinnacles") == 0)
 			AudDrv_GPIO_EXT_SPK_AMP_Select(false,
 				 mCodec_data->mAudio_Ana_Volume[AUDIO_ANALOG_VOLUME_EXT_SPK_AMP]);
 		else
@@ -7117,7 +7118,8 @@ static void ADC_LOOP_DAC_Function(int mode)
 		}
 
 		if (mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] == false) {
-			if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0)
+			if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0
+				|| strcmp(CONFIG_ARCH_MTK_PROJECT, "pinnacles") == 0)
 				AudDrv_GPIO_EXT_SPK_AMP_Select(true,
 					 mCodec_data->mAudio_Ana_Volume[AUDIO_ANALOG_VOLUME_EXT_SPK_AMP]);
 			else
@@ -7177,7 +7179,8 @@ static void ADC_LOOP_DAC_Function(int mode)
 		}
 
 		if (mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] == false) {
-			if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0)
+			if (strcmp(CONFIG_ARCH_MTK_PROJECT, "maverick") == 0 || strcmp(CONFIG_ARCH_MTK_PROJECT, "trona") == 0
+				|| strcmp(CONFIG_ARCH_MTK_PROJECT, "pinnacles") == 0)
 				AudDrv_GPIO_EXT_SPK_AMP_Select(true,
 					 mCodec_data->mAudio_Ana_Volume[AUDIO_ANALOG_VOLUME_EXT_SPK_AMP]);
 			else

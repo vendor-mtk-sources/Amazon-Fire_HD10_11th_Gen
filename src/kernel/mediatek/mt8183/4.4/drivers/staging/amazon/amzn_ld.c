@@ -18,6 +18,9 @@
 #include <linux/mutex.h>
 #include <linux/amzn_ld.h>
 #include <tcpm.h>
+#ifdef CONFIG_AMAZON_LD_SWITCH
+#include <misc/amzn_ld_switch.h>
+#endif
 
 static struct ld_data *g_ld;
 static int g_adc1_mv, g_adc2_mv;
@@ -211,6 +214,83 @@ static int ld_get_auxadc_data(int ch)
 	return auxadc_cali_mv;
 }
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+static int ld_detection(struct ld_data *ld)
+{
+	int threshold_l, threshold_h;
+	int adc1_mv, adc2_mv;
+	int last_state = ld->state;
+	int state;
+
+	/* STEP1: get adc when GPIOs is LOW */
+	memset(ld->adc_mv, 0, sizeof(ld->adc_mv));
+	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin1_low);
+	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin2_low);
+	adc1_mv = ld_get_auxadc_data(ld->adc_channel[0]);
+	pinctrl_select_state(ld->ld_pinctrl, ld->adcsw2_switch_opa_sbu2);
+	msleep(GPIO_VOLT_SETUP_DELAY_MS);
+	adc2_mv = ld_get_auxadc_data(ld->adc_channel[1]);
+	g_adc1_mv = ld->adc_mv[0].step1_mv = adc1_mv;
+	g_adc2_mv = ld->adc_mv[1].step1_mv = adc2_mv;
+	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin1_low);
+	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin2_low);
+
+	threshold_l = ld->threshold[THRESHOLD_L];
+	threshold_h = ld->threshold[THRESHOLD_H];
+
+	if (last_state == WET) {
+		/* Wet -> Dry */
+		state = WET;
+		if (is_in_range(adc1_mv, threshold_l, ADC_MAX_MV)
+			|| is_in_range(adc2_mv, threshold_l, ADC_MAX_MV)) {
+			pr_info("%s: Liquid still on SUB1 or SUB2\n", __func__);
+			state = WET;
+			goto out;
+		}
+
+		/* STEP2: get adc when GPIOs is HIGH */
+		pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin1_high);
+		pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin2_high);
+		pinctrl_select_state(ld->ld_pinctrl, ld->adcsw2_switch_opa_sbu1);
+		msleep(GPIO_VOLT_SETUP_DELAY_MS);
+		adc1_mv = ld_get_auxadc_data(ld->adc_channel[0]);
+		pinctrl_select_state(ld->ld_pinctrl, ld->adcsw2_switch_opa_sbu2);
+		msleep(GPIO_VOLT_SETUP_DELAY_MS);
+		adc2_mv = ld_get_auxadc_data(ld->adc_channel[1]);
+		ld->adc_mv[0].step2_mv = adc1_mv;
+		ld->adc_mv[1].step2_mv = adc2_mv;
+		g_adc1_mv = adc1_mv;
+		g_adc2_mv = adc2_mv;
+		pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin1_low);
+		pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin2_low);
+
+		if (is_in_range(adc1_mv, threshold_h, ADC_MAX_MV)
+			&& is_in_range(adc2_mv, threshold_h, ADC_MAX_MV)) {
+			pr_info("%s: liquid disappear\n", __func__);
+			state = DRY;
+			goto out;
+		}
+	} else {
+		/* Dry -> Wet */
+		state = DRY;
+		if (is_in_range(adc1_mv, threshold_l, ADC_MAX_MV)) {
+			pr_info("%s: ld on SUB1: %d\n", __func__, adc1_mv);
+			state = WET;
+			goto out;
+		}
+
+		if (is_in_range(adc2_mv, threshold_l, ADC_MAX_MV)) {
+			pr_info("%s: ld on SUB2: %d\n", __func__, adc2_mv);
+			state = WET;
+			goto out;
+		}
+	}
+
+out:
+	pinctrl_select_state(ld->ld_pinctrl, ld->adcsw2_switch_opa_sbu1);
+	return state;
+}
+#else
 static int ld_detection(struct ld_data *ld)
 {
 	int threshold_l, threshold_h;
@@ -285,6 +365,7 @@ static int ld_detection(struct ld_data *ld)
 out:
 	return state;
 }
+#endif
 
 static void ld_state_change(struct ld_data *ld, int state)
 {
@@ -467,6 +548,25 @@ static int ld_gpio_init(struct platform_device *pdev)
 		goto out;
 	}
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	ld->adcsw2_switch_init = pinctrl_lookup_state(pinctrl, "adcsw2_init");
+	if (IS_ERR(ld->adcsw2_switch_init)) {
+		pr_err("%s: can't find adcsw2_init\n", __func__);
+		goto out;
+	}
+
+	ld->adcsw2_switch_opa_sbu1 = pinctrl_lookup_state(pinctrl, "switch_opa_sbu1");
+	if (IS_ERR(ld->adcsw2_switch_opa_sbu1)) {
+		pr_err("%s: can't find switch_opa_sbu1\n", __func__);
+		goto out;
+	}
+
+	ld->adcsw2_switch_opa_sbu2 = pinctrl_lookup_state(pinctrl, "switch_opa_sbu2");
+	if (IS_ERR(ld->adcsw2_switch_opa_sbu2)) {
+		pr_err("%s: can't find switch_opa_sbu2\n", __func__);
+		goto out;
+	}
+#else
 	ld->buffer_ctrl_init = pinctrl_lookup_state(pinctrl, "bc_init");
 	if (IS_ERR(ld->buffer_ctrl_init)) {
 		pr_err("%s: can't find bc_init\n", __func__);
@@ -484,10 +584,14 @@ static int ld_gpio_init(struct platform_device *pdev)
 		pr_err("%s: can't find bc_high\n", __func__);
 		goto out;
 	}
-
+#endif
 	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin1_init);
 	pinctrl_select_state(ld->ld_pinctrl, ld->ld_pin2_init);
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	pinctrl_select_state(ld->ld_pinctrl, ld->adcsw2_switch_init);
+#else
 	pinctrl_select_state(ld->ld_pinctrl, ld->buffer_ctrl_init);
+#endif
 
 	return 0;
 out:
@@ -679,7 +783,12 @@ static int ld_probe(struct platform_device *pdev)
 {
 	struct ld_data *ld = NULL;
 	int ret = -ENOMEM;
-
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	if (liquid_id_status != FUSB251_NO_MOUNT) {
+		pr_info("%s, FUSB251 is mounted\n", __func__);
+		return -ENODEV;
+	}
+#endif
 	ld = devm_kzalloc(&pdev->dev, sizeof(struct ld_data),
 			    GFP_KERNEL);
 	if (!ld) {

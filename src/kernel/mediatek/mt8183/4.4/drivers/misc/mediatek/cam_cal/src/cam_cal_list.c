@@ -82,7 +82,8 @@ struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	{GC02M1TR_SENSOR_ID, 0xA8, CMD_AUTO, cam_cal_check_mtk_cid, cam_cal_front_read_region},
 	{GC02M1TRSEC_SENSOR_ID, 0xA8, CMD_AUTO, cam_cal_check_mtk_cid, cam_cal_front_read_region},
 #endif
-
+	{HI1336_SENSOR_ID, 0xA0, CMD_AUTO, cam_cal_check_mtk_cid, 0},
+	{GC08A3_SENSOR_ID, 0xA2, CMD_AUTO, cam_cal_check_mtk_cid, 0},
 	{IMX338_SENSOR_ID, 0xA0, CMD_AUTO, cam_cal_check_mtk_cid, 0},
 	{S5K4E6_SENSOR_ID, 0xA8, CMD_AUTO, cam_cal_check_mtk_cid, 0},
 	{IMX386_SENSOR_ID, 0xA0, CMD_AUTO, cam_cal_check_mtk_cid, 0},

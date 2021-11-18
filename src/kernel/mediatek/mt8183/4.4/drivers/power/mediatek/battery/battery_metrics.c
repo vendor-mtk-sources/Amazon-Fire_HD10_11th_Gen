@@ -195,6 +195,26 @@ int bat_metrics_top_off_mode(bool is_on, long plugin_time)
 	return 0;
 }
 
+int bat_metrics_aging(int aging_factor, int bat_cycle, int qmax)
+{
+	static struct timespec last_log_time;
+	struct timespec now_time, diff;
+
+	get_monotonic_boottime(&now_time);
+	diff = timespec_sub(now_time, last_log_time);
+
+	if (last_log_time.tv_sec != 0 && diff.tv_sec < 3600)
+		return 0;
+
+	pr_info("[%s]diff time:%ld\n", __func__, diff.tv_sec);
+	bat_metrics_log("battery",
+		"battery:def:aging_factor=%d;CT;1,bat_cycle=%d;CT;1,qmax=%d;CT;1:NA",
+		aging_factor / 100, bat_cycle, qmax / 10);
+	get_monotonic_boottime(&last_log_time);
+
+	return 0;
+}
+
 #if defined(CONFIG_FB)
 static int bat_metrics_screen_on(void)
 {

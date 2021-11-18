@@ -289,6 +289,24 @@ config MTK_LENS_GAF008AF_SUPPORT
 	  lens driver for the camera sensor module
 	  Set as y if the driver is used in this project
 
+config MTK_LENS_GT9769TAF_SUPPORT
+	bool "GT9769TAF Lens Driver"
+	default n
+	help
+	  GT9769TAF Lens Driver
+	  This config is used to enable the corresponding
+	  lens driver for the camera sensor module
+	  Set as y if the driver is used in this project
+
+config MTK_LENS_GT9769TAF_TEST_SUPPORT
+	bool "GT9769TAF Lens Driver Test"
+	default n
+	help
+	  GT9769TAF Lens Driver Test
+	  This config is used to enable the corresponding
+	  lens driver test for the camera sensor module
+	  Set as y if the driver is used in this project
+
 config MTK_LENS_WV511AAF_SUPPORT
 	bool "WV511AAF Lens Driver"
 	default n

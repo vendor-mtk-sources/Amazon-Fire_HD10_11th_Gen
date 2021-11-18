@@ -67,6 +67,12 @@ config AMAZON_LD
 	---help---
 	  Say Y here if you want to enable Amazon Liquid Detection Module
 
+config AMAZON_LD_SWITCH
+	tristate "Amazon LD Module Switch Solution"
+	depends on TCPC_CLASS
+	---help---
+	  Say Y here if you want to enable Amazon Liquid Detection Module
+
 config AMZN_RT_TRACE
 	tristate "Amazon memory based logger"
 	default N

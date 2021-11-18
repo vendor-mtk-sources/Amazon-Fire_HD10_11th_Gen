@@ -190,6 +190,46 @@ int32_t wifi_reset_start(VOID)
 }
 EXPORT_SYMBOL(wifi_reset_start);
 
+int32_t wifi_off_start(VOID)
+{
+	struct net_device *netdev = NULL;
+	struct PARAM_CUSTOM_P2P_SET_STRUCT p2pmode;
+	int32_t ret = -1;
+
+	down(&wr_mtx);
+
+	if (powered == 1) {
+		netdev = dev_get_by_name(&init_net, ifname);
+		if (netdev == NULL) {
+			WIFI_ERR_FUNC("Fail to get %s net device\n", ifname);
+		} else {
+			p2pmode.u4Enable = 0;
+			p2pmode.u4Mode = 0;
+
+			if (pf_set_p2p_mode) {
+				if (pf_set_p2p_mode(netdev, p2pmode) != 0)
+					WIFI_ERR_FUNC("Turn off p2p/ap mode fail");
+				else
+					WIFI_INFO_FUNC("Turn off p2p/ap mode");
+			}
+			dev_put(netdev);
+			netdev = NULL;
+			if (mtk_wcn_wmt_func_off(WMTDRV_TYPE_WIFI) == MTK_WCN_BOOL_FALSE) {
+				WIFI_ERR_FUNC("WMT turn off WIFI fail!\n");
+			} else {
+				ret =0;
+				WIFI_INFO_FUNC("WMT turn off WIFI OK!\n");
+			}
+		}
+	} else {
+		ret =0;
+		/* WIFI is off before whole chip reset, do nothing */
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(wifi_off_start);
+
 /*-----------------------------------------------------------------*/
 /*
  *  Receiving RESET_END/RESET_END_FAIL message

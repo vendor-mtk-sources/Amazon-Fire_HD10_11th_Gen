@@ -58,6 +58,9 @@ typedef struct _RESET_STRUCT_T {
 	struct work_struct rst_work;
 	struct work_struct rst_trigger_work;
 	UINT_32 rst_trigger_flag;
+#if CFG_WLAN_RESET_SUPPORT
+	struct work_struct wlan_rst_work;
+#endif
 } RESET_STRUCT_T;
 
 #if CFG_CHIP_RESET_SUPPORT
@@ -121,6 +124,9 @@ struct MTK_WCN_WMT_WLAN_CB_INFO {
 
 #if CFG_CHIP_RESET_SUPPORT
 extern int wifi_reset_start(VOID);
+#if CFG_WLAN_RESET_SUPPORT
+extern int wifi_off_start(VOID);
+#endif
 extern int wifi_reset_end(ENUM_RESET_STATUS_T);
 extern INT_32 mtk_wcn_wmt_msgcb_unreg(enum ENUM_WMTDRV_TYPE eType);
 extern INT_32 mtk_wcn_wmt_msgcb_reg(enum ENUM_WMTDRV_TYPE eType, PF_WMT_CB pCb);
@@ -156,6 +162,15 @@ extern INT_32 mtk_wcn_wmt_wlan_unreg(VOID);
 #define GL_RESET_TRIGGER(_prAdapter, _u4Flags) \
 	DBGLOG(INIT, INFO, "DO NOT support chip reset\n")
 #endif
+
+#if CFG_WLAN_RESET_SUPPORT
+#define GL_WLAN_RESET_TRIGGER() \
+	glWlanResetTrigger((const PUINT_8)__FILE__, __LINE__)
+#else
+#define GL_WLAN_RESET_TRIGGER() \
+	DBGLOG(INIT, INFO, "DO NOT support WLAN reset\n")
+#endif
+
 /*******************************************************************************
 *                  F U N C T I O N   D E C L A R A T I O N S
 ********************************************************************************
@@ -175,5 +190,7 @@ BOOLEAN glResetTrigger(P_ADAPTER_T prAdapter, UINT_32 u4RstFlag, const PUINT_8 p
 UINT32 wlanPollingCpupcr(UINT32 u4Times, UINT32 u4Sleep);
 
 WLAN_STATUS wlanGetCpupcr(PUINT32 pu4Cpupcr);
-
+#if CFG_WLAN_RESET_SUPPORT
+BOOLEAN glWlanResetTrigger(const PUINT_8 pucFile, UINT_32 u4Line);
+#endif
 #endif /* _GL_RST_H */

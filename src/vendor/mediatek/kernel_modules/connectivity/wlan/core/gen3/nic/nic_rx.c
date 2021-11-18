@@ -1917,8 +1917,12 @@ VOID nicRxProcessEventPacket(IN P_ADAPTER_T prAdapter, IN OUT P_SW_RFB_T prSwRfb
 		prEvent->ucEID, prEvent->ucSeqNum, prEvent->u2PacketLength);
 
 #if CFG_SUPPORT_WAKEUP_STATISTICS
-	if (is_wakeup)
-		g_wake_event_count[prEvent->ucEID]++;
+	if (is_wakeup) {
+		if (prEvent->ucEID >= EVENT_ID_END)
+			DBGLOG_MEM8(RX, ERROR, prEvent, prEvent->u2PacketLength > 24 ? 24 : prEvent->u2PacketLength);
+		else
+			g_wake_event_count[prEvent->ucEID]++;
+	}
 #endif
 #if CFG_SUPPORT_WIFI_POWER_DEBUG
 	if (glIsDataStatEnabled() && !kalTRxStatsPaused())

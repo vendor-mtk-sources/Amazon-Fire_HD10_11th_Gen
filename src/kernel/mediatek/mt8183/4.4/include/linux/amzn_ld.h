@@ -50,9 +50,16 @@ struct ld_data {
 	struct pinctrl_state *ld_pin2_init;
 	struct pinctrl_state *ld_pin2_low;
 	struct pinctrl_state *ld_pin2_high;
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	struct pinctrl_state *adcsw2_switch_init;
+	struct pinctrl_state *adcsw2_switch_opa_sbu1;
+	struct pinctrl_state *adcsw2_switch_opa_sbu2;
+#else
 	struct pinctrl_state *buffer_ctrl_init;
 	struct pinctrl_state *buffer_ctrl_low;
 	struct pinctrl_state *buffer_ctrl_high;
+#endif
+
 	struct switch_dev ld_switch;
 	struct tcpc_device *tcpc;
 	struct adc_data adc_mv[2];
@@ -87,7 +94,11 @@ static inline void ld_metrics_log(void) {}
 
 #define TASK_DELAY_MSEC 15000
 #define RECHECK_DELAY_MSEC 5000
+#ifdef CONFIG_AMAZON_LD_SWITCH
+#define GPIO_VOLT_SETUP_DELAY_MS 200
+#else
 #define GPIO_VOLT_SETUP_DELAY_MS 5
+#endif
 #define ADC_MAX_MV 1500
 #define IUSB_LIMITATION_UA 0
 #define INVALID_VBUS_UV 1000000

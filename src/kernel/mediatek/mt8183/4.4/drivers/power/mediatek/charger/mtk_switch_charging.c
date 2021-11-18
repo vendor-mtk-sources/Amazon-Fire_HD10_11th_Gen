@@ -67,9 +67,7 @@
 #include <musb_core.h>
 #include "mtk_charger_intf.h"
 #include "mtk_switch_charging.h"
-#ifdef CONFIG_MTK_USE_AGING_ZCV
 #include "mtk_battery_internal.h"
-#endif
 
 static int _uA_to_mA(int uA)
 {
@@ -586,10 +584,30 @@ static int mtk_switch_charging_plug_in(struct charger_manager *info)
 {
 	struct switch_charging_alg_data *swchgalg = info->algorithm_data;
 
+	if (info->enable_sw_safety_timer) {
+		if (info->disconnect_duration >=
+			info->sw_safety_timer_reset_time) {
+			chr_err("%s: Reset SW safety timer\n", __func__);
+			info->safety_timeout = false;
+			get_monotonic_boottime(&swchgalg->charging_begin_time);
+			swchgalg->total_charging_time = 0;
+		}
+	}
+	/* Keep charging state as CHR_BATFULL. */
+	if (info->enable_bat_eoc_protect) {
+		if (info->bat_eoc_protect) {
+			chr_err("%s: Keep charging state full\n", __func__);
+			swchgalg->state = CHR_BATFULL;
+			info->polling_interval = CHARGING_FULL_INTERVAL;
+			battery_main.BAT_STATUS = POWER_SUPPLY_STATUS_CHARGING;
+			battery_update(&battery_main);
+			charger_dev_do_event(info->chg1_dev, EVENT_EOC, 0);
+			return  0;
+		}
+	}
 	swchgalg->state = CHR_CC;
 	info->polling_interval = CHARGING_INTERVAL;
 	swchgalg->disable_charging = false;
-	get_monotonic_boottime(&swchgalg->charging_begin_time);
 	charger_manager_notifier(info, CHARGER_NOTIFY_START_CHARGING);
 
 	return 0;
@@ -597,9 +615,6 @@ static int mtk_switch_charging_plug_in(struct charger_manager *info)
 
 static int mtk_switch_charging_plug_out(struct charger_manager *info)
 {
-	struct switch_charging_alg_data *swchgalg = info->algorithm_data;
-
-	swchgalg->total_charging_time = 0;
 	info->power_detection.iusb_ua = 0;
 
 	mtk_pe20_set_is_cable_out_occur(info, true);
@@ -626,8 +641,17 @@ static int mtk_switch_charging_do_charging(struct charger_manager *info, bool en
 		/* disable might change state , so first */
 		_disable_all_charging(info);
 		swchgalg->disable_charging = true;
-		swchgalg->state = CHR_ERROR;
-		charger_manager_notifier(info, CHARGER_NOTIFY_ERROR);
+		/* Force state machine to CHR_BATFULL if charging is
+		 * disabled by battery EOC protection.
+		 */
+		if (info->bat_eoc_protect == false) {
+			swchgalg->state = CHR_ERROR;
+			charger_manager_notifier(info, CHARGER_NOTIFY_ERROR);
+		} else {
+			swchgalg->state = CHR_BATFULL;
+			charger_dev_do_event(info->chg1_dev, EVENT_EOC, 0);
+			charger_dev_enable_ir_comp(info->chg1_dev, false);
+		}
 	}
 
 	return 0;
@@ -761,6 +785,13 @@ int mtk_switch_chr_full(struct charger_manager *info)
 	 */
 	swchg_select_cv(info);
 	info->polling_interval = CHARGING_FULL_INTERVAL;
+
+	/* Keep charging state at CHR_BATFULL after triggering
+	 * battery EOC protection.
+	 */
+	if (info->bat_eoc_protect)
+		return 0;
+
 	charger_dev_is_charging_done(info->chg1_dev, &chg_done);
 	if (!chg_done) {
 		swchgalg->state = CHR_CC;
@@ -798,7 +829,7 @@ static int mtk_switch_charging_run(struct charger_manager *info)
 	struct switch_charging_alg_data *swchgalg = info->algorithm_data;
 	int ret = 0;
 
-	pr_debug("%s [%d %d], timer=%d\n", __func__, swchgalg->state,
+	chr_err("%s [%d %d], timer=%d\n", __func__, swchgalg->state,
 		info->pd_type,
 		swchgalg->total_charging_time);
 

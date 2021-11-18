@@ -49,6 +49,11 @@
 #include <linux/thermal_framework.h>
 #endif
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+#include <misc/amzn_ld_switch.h>
+#define TEMP_INVALID	-274
+#endif
+
 /*=============================================================
  *Weak functions
  *=============================================================
@@ -469,7 +474,6 @@ static struct bts2_TEMPERATURE bts2_Temperature_Table7[] = {
 	{125, 2522}
 };
 
-
 /* convert register to temperature  */
 static __s16 mtkts_bts2_thermistor_conver_temp(__s32 Res)
 {
@@ -586,6 +590,17 @@ static int get_hw_bts2_temp(void)
 		return 0;
 	}
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	if (amzn_ld_switch_is_support) {
+		/* adcsw3 switch only available on device including new liquid dectect solution */
+		amzn_ld_switch_adcsw3_lock();
+		if (amzn_ld_switch_adcsw3(NTC_BATTERY)) {
+			pr_err("%s, fail to switch [switch_battery_ntc]\n", __func__);
+			amzn_ld_switch_adcsw3_unlock();
+			return TEMP_INVALID;
+		}
+	}
+#endif
 	i = times;
 	while (i--) {
 		ret_value = IMM_GetOneChannelValue(Channel, data, &ret_temp);
@@ -628,6 +643,11 @@ static int get_hw_bts2_temp(void)
 			Channel, ret_temp);
 #endif
 	}
+
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	if (amzn_ld_switch_is_support)
+		amzn_ld_switch_adcsw3_unlock();
+#endif
 
 	/* Mt_auxadc_hal.c */
 	/* #define VOLTAGE_FULL_RANGE  1500 // VA voltage */

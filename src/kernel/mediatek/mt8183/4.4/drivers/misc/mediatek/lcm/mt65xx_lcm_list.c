@@ -1169,6 +1169,10 @@ LCM_DRIVER *lcm_driver_list[] = {
 	&ft8201ab_wuxga_dsi_vdo_lcm_drv,
 #endif
 
+#if defined(FT8201AB_WUXGA_DSI_VDO_PIN)
+	&ft8201ab_wuxga_dsi_vdo_pin_lcm_drv,
+#endif
+
 #if defined(FT8201_WUXGA_DSI_VDO)
 	&ft8201_wuxga_dsi_vdo_lcm_drv,
 #endif

@@ -92,3 +92,7 @@ endif
 ifeq ($(CONFIG_ARCH_MTK_PROJECT),"trona")
 obj-y += tro-machine.o
 endif
+
+ifeq ($(CONFIG_ARCH_MTK_PROJECT),"pinnacles")
+obj-y += pin-machine.o
+endif

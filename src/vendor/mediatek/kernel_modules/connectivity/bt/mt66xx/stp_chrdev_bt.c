@@ -89,7 +89,7 @@ static INT32 bt_ftrace_flag;
  *   2 - reset end, have not sent Hardware Error event yet
  *   3 - reset end, already sent Hardware Error event
  */
-static UINT32 rstflag;
+static UINT32 rstflag = 0;
 static UINT8 HCI_EVT_HW_ERROR[] = {0x04, 0x10, 0x01, 0x00};
 static loff_t rd_offset;
 
@@ -553,11 +553,14 @@ static int BT_close(struct inode *inode, struct file *file)
 	bt_state_notify(OFF);
 #endif
 
-	rstflag = 0;
 	bt_ftrace_flag = 0;
 	mtk_wcn_wmt_msgcb_unreg(WMTDRV_TYPE_BT);
 	mtk_wcn_stp_register_event_cb(BT_TASK_INDX, NULL);
-
+	if (rstflag != 0) {
+		BT_LOG_PR_INFO("chip reset is ongoing, rstflag = %d, turn off BT OK!\n", rstflag);
+		return 0;
+	}
+	rstflag = 0;
 	if (mtk_wcn_wmt_func_off(WMTDRV_TYPE_BT) == MTK_WCN_BOOL_FALSE) {
 		BT_LOG_PR_ERR("WMT turn off BT fail!\n");
 		return -EIO;	/* Mostly, native program will not check this return value. */

@@ -1487,6 +1487,14 @@ P_BSS_DESC_T scanAddToBssDesc(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfb)
 			UINT_8 ucSpatial = 0;
 			UINT_8 i = 0;
 
+			/* end Support AP Selection */
+			if (IE_SIZE(pucIE) != (sizeof(IE_HT_CAP_T))) {
+				DBGLOG(SCN, WARN,
+					"HT_CAP wrong length(%zu)->(%d)\n",
+					(sizeof(IE_HT_CAP_T) - 2),
+					IE_LEN(prHtCap));
+				break;
+			}
 			prBssDesc->fgIsHTPresent = TRUE;
 
 			if (prBssDesc->fgMultiAnttenaAndSTBC)
@@ -1548,6 +1556,14 @@ P_BSS_DESC_T scanAddToBssDesc(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfb)
 		case ELEM_ID_BSS_LOAD:
 		{
 			struct IE_BSS_LOAD *prBssLoad = (struct IE_BSS_LOAD *)pucIE;
+			if (IE_SIZE(prBssLoad) !=
+				(sizeof(struct IE_BSS_LOAD))) {
+				DBGLOG(SCN, WARN,
+					"BSS LOAD IE_LEN err(%d)->(%d)!\n",
+					(sizeof(struct IE_BSS_LOAD) - 2),
+					IE_LEN(prBssLoad));
+				break;
+			}
 
 			prBssDesc->u2StaCnt = prBssLoad->u2StaCnt;
 			prBssDesc->ucChnlUtilization = prBssLoad->ucChnlUtilizaion;
@@ -1588,7 +1604,8 @@ P_BSS_DESC_T scanAddToBssDesc(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfb)
 		}
 		case ELEM_ID_RRM_ENABLED_CAP:
 			/* RRM Capability IE is always in length 5 bytes */
-			kalMemCopy(prBssDesc->aucRrmCap, pucIE + 2, 5);
+			if (IE_LEN(pucIE) == RRM_CAPABILIITY_IE_LEN)
+				kalMemCopy(prBssDesc->aucRrmCap, pucIE + 2, RRM_CAPABILIITY_IE_LEN);
 			break;
 			/* no default */
 		}
@@ -1693,7 +1710,8 @@ P_BSS_DESC_T scanAddToBssDesc(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfb)
 		prBssDesc->eSco = CHNL_EXT_SCN;
 	}
 #if CFG_SUPPORT_802_11K
-	if (prCountryIE) {
+	if (prCountryIE && prCountryIE->ucLength ==
+			(sizeof(IE_COUNTRY_T) - ELEM_HDR_LEN)) {
 		UINT_8 ucRemainLen = prCountryIE->ucLength - 3;
 		P_COUNTRY_INFO_SUBBAND_TRIPLET_T prSubBand = &prCountryIE->arCountryStr[0];
 		const UINT_8 ucSubBandSize = (UINT_8)sizeof(COUNTRY_INFO_SUBBAND_TRIPLET_T);

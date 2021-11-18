@@ -92,6 +92,11 @@
 
 #define DISABLE_LOW_BATTERY_TEMP (-100)
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+#include <misc/amzn_ld_switch.h>
+#endif
+#include <mt-plat/battery_metrics.h>
+
 /* ============================================================ */
 /* global variable */
 /* ============================================================ */
@@ -377,8 +382,24 @@ void fgauge_get_profile_id(void)
 	gm.idme_battery_id = idme_get_battery_info(31, 4);
 
 	if (gm.use_adc_id) {
-		ret = IMM_GetOneChannelValue_Cali(gm.adc_channel,
-				&gm.adc_battery_id);
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	if (!amzn_ld_switch_is_support) {
+		pr_info("%s, Use adc_channel[%d]\n", __func__, gm.adc_channel);
+		ret = IMM_GetOneChannelValue_Cali(gm.adc_channel, &gm.adc_battery_id);
+	} else {
+		pr_info("%s, [%s]\n", __func__, (liquid_id_status > 0) ? "FUSB251 isn't mounted" : "FUSB251 is mounted");
+		amzn_ld_switch_adcsw3_lock();
+		if (!amzn_ld_switch_adcsw3(ID_BATTERY))
+			ret = IMM_GetOneChannelValue_Cali(ADC_CHANNEL_0, &gm.adc_battery_id);
+		else {
+			bm_err("fail to switch battery_id\n");
+			ret = -1;
+		}
+		amzn_ld_switch_adcsw3_unlock();
+	}
+#else
+	ret = IMM_GetOneChannelValue_Cali(gm.adc_channel, &gm.adc_battery_id);
+#endif
 		if (ret != 0) {
 			bm_err("Read battery cell ID fail\n");
 			gm.battery_id = 0;
@@ -1645,6 +1666,11 @@ void fg_custom_init_from_dts(struct platform_device *dev)
 
 	gm.enable_zero_percent_shutdown =
 		of_property_read_bool(np, "enable_zero_percent_shutdown");
+
+	if (!of_property_read_u32(np, "ui_fast_tracking_en", &val))
+		fg_cust_data.ui_fast_tracking_en = (int)val;
+	bm_err("%s: %s fast-tracking\n", __func__,
+		(fg_cust_data.ui_fast_tracking_en == 1)?"Enable":"Disable");
 }
 #endif
 
@@ -2804,6 +2830,10 @@ void fg_daemon_send_data(
 				prcv->idx);
 
 			bm_info("FG_LOG_DATA\n");
+
+			bat_metrics_aging(fg_log_data.gm30_aging_factor,
+					  fg_log_data.gm30_bat_cycle,
+					  fg_log_data.gm30_qmax_t_0ma_tb1);
 		}
 		break;
 

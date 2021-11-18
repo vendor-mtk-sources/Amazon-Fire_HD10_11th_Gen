@@ -63,7 +63,9 @@ static RESET_STRUCT_T wifi_rst;
 
 static void mtk_wifi_reset(struct work_struct *work);
 static void mtk_wifi_trigger_reset(struct work_struct *work);
-
+#if CFG_WLAN_RESET_SUPPORT
+static void mtk_wifi_trigger_wlan_reset(struct work_struct *work);
+#endif
 /*******************************************************************************
 *                   F U N C T I O N   D E C L A R A T I O N S
 ********************************************************************************
@@ -95,6 +97,9 @@ VOID glResetInit(VOID)
 	/* 2. Initialize reset work */
 	INIT_WORK(&(wifi_rst.rst_work), mtk_wifi_reset);
 	INIT_WORK(&(wifi_rst.rst_trigger_work), mtk_wifi_trigger_reset);
+#if CFG_WLAN_RESET_SUPPORT
+	INIT_WORK(&(wifi_rst.wlan_rst_work), mtk_wifi_trigger_wlan_reset);
+#endif
 }
 
 /*----------------------------------------------------------------------------*/
@@ -262,6 +267,37 @@ BOOLEAN glResetTrigger(P_ADAPTER_T prAdapter, UINT_32 u4RstFlag, const PUINT_8 p
 	return fgResult;
 }
 
+#if CFG_WLAN_RESET_SUPPORT
+static void mtk_wifi_trigger_wlan_reset(struct work_struct *work)
+{
+	ENUM_RESET_STATUS_T result = RESET_SUCCESS;
+
+	if (-1 == wifi_off_start()) {
+		result = RESET_FAIL;
+	}
+	wifi_reset_end(result);
+
+	DBGLOG(INIT, INFO, "reset result %d\n", result);
+}
+
+BOOLEAN glWlanResetTrigger(const PUINT_8 pucFile, UINT_32 u4Line)
+{
+	BOOLEAN fgResult = TRUE;
+
+	if (fgIsResetting || fgResetTriggered) {
+		DBGLOG(INIT, ERROR,
+		       "Skip trigger wlan reset in %s line %u, during resetting! \n",
+		       pucFile, u4Line);
+		fgResult = TRUE;
+	} else {
+		DBGLOG(INIT, ERROR,
+			"Trigger wlan reset in %s line %u!\n",
+			pucFile, u4Line);
+		schedule_work(&(wifi_rst.wlan_rst_work));
+	}
+	return fgResult;
+}
+#endif
 #endif /* CFG_CHIP_RESET_SUPPORT */
 /*----------------------------------------------------------------------------*/
 /*!

@@ -117,5 +117,4 @@ source "drivers/staging/dyn_obj/Kconfig"
 source "drivers/staging/amazon/Kconfig"
 
 
-
 endif # STAGING

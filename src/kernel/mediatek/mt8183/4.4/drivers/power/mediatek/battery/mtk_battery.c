@@ -71,6 +71,9 @@
 
 #include <mtk_charger_intf.h>
 
+#ifdef CONFIG_AMAZON_LD_SWITCH
+#include <misc/amzn_ld_switch.h>
+#endif
 
 /* ============================================================ */
 /* define */
@@ -3036,8 +3039,23 @@ static ssize_t cell_id_adc_show(struct device *dev,
 	uint32_t battery_id_adc;
 	int ret;
 
-	ret = IMM_GetOneChannelValue_Cali(gm.adc_channel,
-			&battery_id_adc);
+#ifdef CONFIG_AMAZON_LD_SWITCH
+	if (!amzn_ld_switch_is_support) {
+		ret = IMM_GetOneChannelValue_Cali(gm.adc_channel, &battery_id_adc);
+	} else {
+		amzn_ld_switch_adcsw3_lock();
+		if (!amzn_ld_switch_adcsw3(ID_BATTERY))
+			ret = IMM_GetOneChannelValue_Cali(ADC_CHANNEL_0, &battery_id_adc);
+		else {
+			pr_err("%s, fail to switch battery_id\n", __func__);
+			amzn_ld_switch_adcsw3_unlock();
+			return scnprintf(buf, PAGE_SIZE, "Invalid\n");
+		}
+		amzn_ld_switch_adcsw3_unlock();
+	}
+#else
+	ret = IMM_GetOneChannelValue_Cali(gm.adc_channel, &battery_id_adc);
+#endif
 	if (ret != 0)
 		return scnprintf(buf, PAGE_SIZE, "Invalid\n");
 	else
@@ -3977,7 +3995,6 @@ static int __init battery_probe(struct platform_device *dev)
 	const char *boot_voltage = NULL;
 	char boot_voltage_tmp[10];
 	int boot_voltage_len = 0;
-
 	wakeup_source_init(&battery_lock, "battery wakelock");
 	__pm_stay_awake(&battery_lock);
 
@@ -3998,7 +4015,6 @@ static int __init battery_probe(struct platform_device *dev)
 					adc_cali_devno,
 					NULL, ADC_CALI_DEVNAME);
 /*****************************/
-
 	mtk_battery_init(dev);
 
 	/* Power supply class */

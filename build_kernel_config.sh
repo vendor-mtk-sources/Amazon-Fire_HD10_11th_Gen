@@ -2,12 +2,12 @@
 #
 #  build_kernel_config.sh
 #
-#  Copyright (c) 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#  Copyright (c) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 ################################################################################
 
 KERNEL_SUBPATH="kernel/mediatek/mt8183/4.4"
-DEFCONFIG_NAME="maverick_defconfig"
+DEFCONFIG_NAME="trona_defconfig"
 TARGET_ARCH="arm64"
 TOOLCHAIN_REPO="https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9"
 TOOLCHAIN_NAME="aarch64-linux-android-4.9"

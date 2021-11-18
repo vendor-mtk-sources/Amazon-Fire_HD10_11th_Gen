@@ -231,6 +231,7 @@ extern UINT_8 g_aucNvram[];
 #if defined(CONFIG_IDME) || defined(CONFIG_AMZN_IDME)
 #define DEV_TYPE_ID_MAVERICK 0x003F
 #define DEV_TYPE_ID_TRONA 0x005E
+#define DEV_TYPE_ID_PINNACLES 0x0060
 #endif
 
 #if CFG_SUPPORT_ANT_DIVERSITY

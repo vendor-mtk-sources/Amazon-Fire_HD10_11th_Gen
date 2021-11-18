@@ -48,6 +48,7 @@
 
 #ifdef CONFIG_THERMAL_FOD
 #include "mt-plat/charger_class.h"
+static int ntc_switch_status; /* Default to read emmc thermistor */
 #endif
 
 /*=============================================================
@@ -567,22 +568,26 @@ int get_hw_bts_temp_export(int aux_channel, int level)
 		mutex_lock(&BTS_SWITCH_lock);
 		if (aux_channel == BTS3_RAP_ADC_CHANNEL) {
 			struct pinctrl_state *ntc_switch;
-
 			/* ntc switch only available on device including virtual sensor with fod feature */
 			if (!IS_ERR_OR_NULL(fod_vs_pctl)) {
-				if (level)
-					ntc_switch = pinctrl_lookup_state(fod_vs_pctl, PINCTRL_WPC_NTC);
-				else
-					ntc_switch = pinctrl_lookup_state(fod_vs_pctl, PINCTRL_EMMC_NTC);
+				if (level != ntc_switch_status) {
+					if (level)
+						ntc_switch = pinctrl_lookup_state(fod_vs_pctl, PINCTRL_WPC_NTC);
+					else
+						ntc_switch = pinctrl_lookup_state(fod_vs_pctl, PINCTRL_EMMC_NTC);
 
-				if (IS_ERR(ntc_switch)) {
-					pr_err("failed to find pinctrl [%s]\n", ((level > 0) ? PINCTRL_WPC_NTC : PINCTRL_EMMC_NTC));
-					return -ENODEV;
-				} else
-					pinctrl_select_state(fod_vs_pctl, ntc_switch);
+					if (IS_ERR(ntc_switch)) {
+						pr_err("failed to find pinctrl [%s]\n",
+								((level > 0) ? PINCTRL_WPC_NTC : PINCTRL_EMMC_NTC));
+						mutex_unlock(&BTS_SWITCH_lock);
+						return -ENODEV;
+					} else
+						pinctrl_select_state(fod_vs_pctl, ntc_switch);
 
-				/* it will need > 200ms for the delay time for NTC reading */
-				msleep(200);
+					ntc_switch_status = level;
+					/* it will need > 200ms for the delay time for NTC reading */
+					msleep(200);
+				}
 			}
 		}
 	}
@@ -632,7 +637,6 @@ int get_hw_bts_temp_export(int aux_channel, int level)
 
 	if (get_charger_by_name("wireless_chg") != NULL)
 		mutex_unlock(&BTS_SWITCH_lock);
-
 
 	/* Mt_auxadc_hal.c */
 	/* #define VOLTAGE_FULL_RANGE  1500 // VA voltage */

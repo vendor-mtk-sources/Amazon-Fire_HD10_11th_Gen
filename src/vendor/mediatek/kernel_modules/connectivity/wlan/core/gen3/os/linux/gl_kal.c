@@ -2954,6 +2954,14 @@ int tx_thread(void *data)
 			(((u8CurrentSysTime - u8AbsenceSysTime) > 20 * USEC_PER_SEC) &&
 			fgStopQueue))) {
 			wlanNotifyTxHangMetric(FALSE);
+			GL_WLAN_RESET_TRIGGER();
+#ifdef ENABLED_IN_ENGUSERDEBUG
+#if CFG_NOTIFY_TX_HANG_METRIC_UT
+			etrTxHangMetric = TRIGGER_TX_HANG_UT_START;
+			u8AbsenceSysTime = 0;
+			fgStopQueue = FALSE;
+#endif
+#endif
 		}
 #endif
 

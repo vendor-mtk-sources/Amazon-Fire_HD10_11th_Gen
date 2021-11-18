@@ -226,7 +226,7 @@ static INT32 mtk_wmt_probe(struct platform_device *pdev)
 
 	/* find gps lna gpio number */
 	if (consys_pinctrl) {
-		pinctl_node = of_parse_phandle(pdev->dev.of_node, "pinctrl-1", 0);
+		pinctl_node = of_parse_phandle(pdev->dev.of_node, "pinctrl-3", 0);
 		if (pinctl_node) {
 			pins_node = of_get_child_by_name(pinctl_node, "pins_cmd_dat");
 			if (pins_node) {

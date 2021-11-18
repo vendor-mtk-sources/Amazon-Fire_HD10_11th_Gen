@@ -13,19 +13,63 @@ INCIDENTAL, PUNITIVE, AND CONSEQUENTIAL DAMAGES.
 
 BUILDING THE KERNEL
 -------------------
-You will need the files platform.tar and build_kernel.tar.gz from the
-tarball to build the kernel.
+You will need the files platform.tar and build_kernel.tar.gz (or build.tar.gz)
+from the tarball to build the kernel.
 
-1.  Extract the build_kernel.tar.gz tarball to a directory of your choosing.
+1.  You may need to install prerequisite libraries. On a Debian-based system:
 
-2.  Obtain a copy of Clang compiler. Recommended version: 6.0.2.
+    sudo apt-get install libssl-dev
+    sudo apt-get install lib32stdc++6
+    
+2.  You may need to change /bin/sh to bash:
 
-3.  Update build_kernel_config.sh and paste in the path to the root of the
-    copy of the Clang compiler in the CLANG_COMPILER_PATH variable.
+    sudo mv /bin/sh /bin/sh.orig
+    sudo ln -s /bin/bash /bin/sh
 
-4.  Execute the script by running:
+3.	Build may use prebuilt binary minigzip, a 32-bit binary, and if you are
+    using 64-bit Linux, you may need to install additional libraries:
 
-    build_kernel.sh "<path to platform.tar>" "<target output directory>"
+	Ubuntu 12.04:
+	sudo sh -c "echo 'foreign-architecture i386' > /etc/dpkg/dpkg.cfg.d/multiarch"
+	sudo apt-get update
+	sudo apt-get install multiarch-support
+	sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+
+4.  Extract build_kernel.tar.gz or build.tar.gz tarball if either exists.
+
+5.  Check build_kernel_config.sh if any additional compilers are needed. 
+
+6.  Execute the script by running:
+
+    ./build_kernel.sh "<path to platform.tar>" "<target output directory>"
+
+
+BUILDING BUSYBOX (if applicable)
+--------------------------------
+You will need the files platform.tar and build.tar.gz from the
+tarball to build busybox.
+
+1.  Extract build.tar.gz tarball if it exists.
+
+2.  Check build_busybox_config.sh if any additional compilers are needed. 
+
+3.  Execute the script by running:
+
+    ./build_busybox.sh "<path to platform.tar>" "<target output directory>"
+
+
+BUILDING UBOOT (if applicable)
+------------------------------
+You will need the files platform.tar and build.tar.gz from the
+tarball to build uboot.
+
+1.  Extract build.tar.gz tarball if it exists.
+
+2.  Check build_uboot_config.sh if any additional compilers are needed. 
+
+3.  Execute the script by running:
+
+    ./build_uboot.sh "<path to platform.tar>" "<target output directory>"
 
 
 BUILDING LIBRARIES
@@ -48,8 +92,8 @@ checked out source code, modifying files in place if needed.
 
 4. Build the source code per the instructions in
 https://source.android.com/source/building.html .  For the purposes of testing
-the libraries, we used the target "aosp_walleye-userdebug" as the target of the
-lunch command.
+the libraries, we used the target "aosp_flo-userdebug" as the target of the 'lunch'
+command.
 
 5. Upon completion of the build, the relevant libraries can be found under the
 'out/target' folder of the source code.

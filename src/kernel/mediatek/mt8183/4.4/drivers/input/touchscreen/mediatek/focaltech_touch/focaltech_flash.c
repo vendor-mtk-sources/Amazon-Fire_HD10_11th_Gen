@@ -74,6 +74,10 @@ u8 fw_file7[] = {
 #include FTS_UPGRADE_FW7_FILE
 };
 
+u8 fw_file8[] = {
+#include FTS_UPGRADE_FW8_FILE
+};
+
 struct upgrade_module module_list[] = {
 	{FTS_MODULE_ID, FTS_MODULE_NAME, fw_file, sizeof(fw_file)},
 	{FTS_MODULE2_ID, FTS_MODULE2_NAME, fw_file2, sizeof(fw_file2)},
@@ -83,8 +87,7 @@ struct upgrade_module module_list[] = {
 	{FTS_MODULE6_ID, FTS_MODULE6_NAME, fw_file6, sizeof(fw_file6)},
 	/* 8201AB */
 	{FTS_MODULE7_ID, FTS_MODULE7_NAME, fw_file7, sizeof(fw_file7)},
-
-
+	{FTS_MODULE8_ID, FTS_MODULE8_NAME, fw_file8, sizeof(fw_file8)},
 };
 
 struct upgrade_func *upgrade_func_list[] = {

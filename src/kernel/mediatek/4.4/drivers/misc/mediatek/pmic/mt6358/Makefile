@@ -1,0 +1,1 @@
+obj-$(CONFIG_MACH_MT8183) += v1/

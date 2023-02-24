@@ -500,7 +500,7 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 			imgsensor_custom_config[psensor_inst->sensor_idx].i2c_dev);
 	imgsensor_i2c_filter_msg(&psensor_inst->i2c_cfg, true);
 
-	while (pimgsensor->psensor_list[i] && i < MAX_NUM_OF_SUPPORT_SENSOR) {
+	while (i < MAX_NUM_OF_SUPPORT_SENSOR && pimgsensor->psensor_list[i]) {
 		if (pimgsensor->psensor_list[i]->init) {
 			pimgsensor->psensor_list[i]->init(&psensor->pfunc);
 
@@ -864,7 +864,8 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		if ((imgsensor_ca_invoke_command(IMGSENSOR_TEE_CMD_SET_SENSOR,
 		c_params, &ret) != 0) || (ret != 0)) {
 			PK_DBG("Error!! set secure sensor_pfunc failed!");
-			return ret;
+			kfree(pFeaturePara);
+			return -EINVAL;
 		}
 		break;
 	case SENSOR_FEATURE_CLOSE_SECURE_SESSION:
@@ -903,12 +904,15 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	{
 		struct IMGSENSOR_SENSOR_LIST *psensor_list =
 			(struct IMGSENSOR_SENSOR_LIST *)pFeaturePara;
-		psensor->inst.sensor_idx = pFeatureCtrl->InvokeCamera;
-		if (FeatureParaLen < (sizeof(psensor_list->id) + sizeof(psensor_list->name))) {
+		/* NOTICE: MUINT32 (*init)(struct SENSOR_FUNCTION_STRUCT **pfFunc) */
+		/* Not used and don't use due to A32+K64 no support ioctl of address type */
+		if (FeatureParaLen < (1 * sizeof(MUINT32) + 32 * sizeof(MUINT8))) {
+			PK_PR_ERR("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
-			PK_PR_ERR("SET_DRIVER: out of bound reads\n");
 			return -EINVAL;
 		}
+
+		psensor->inst.sensor_idx = pFeatureCtrl->InvokeCamera;
 		if (imgsensor_set_driver(psensor) != -EIO) {
 			psensor_list->id = psensor->inst.psensor_list->id;
 			memcpy(psensor_list->name,
@@ -928,6 +932,12 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		PK_DBG("[kd_sensorlist]enter kdSetExpGain\n");
 		/* keep the information to wait Vsync synchronize */
 		pSensorSyncInfo = (ACDK_KD_SENSOR_SYNC_STRUCT *) pFeaturePara;
+		if (FeatureParaLen < 4 * sizeof(unsigned long long)) {
+			PK_DBG("FeatureParaLen is too small %d\n",
+					FeatureParaLen);
+			kfree(pFeaturePara);
+			return -EINVAL;
+		}
 
 		FeatureParaLen = 2;
 
@@ -1019,7 +1029,15 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		{
 			SENSOR_AE_AWB_REF_STRUCT *pAeAwbRef = NULL;
 			unsigned long long *pFeaturePara_64 = (unsigned long long *)pFeaturePara;
-			void *usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
+			void *usr_ptr = NULL;
+
+			if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n",
+					FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
+			usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
 
 			pAeAwbRef = kmalloc(sizeof(SENSOR_AE_AWB_REF_STRUCT), GFP_KERNEL);
 			if (pAeAwbRef == NULL) {
@@ -1049,8 +1067,15 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		{
 			SENSOR_WINSIZE_INFO_STRUCT *pCrop = NULL;
 			unsigned long long *pFeaturePara_64 = (unsigned long long *)pFeaturePara;
-			void *usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
+			void *usr_ptr = NULL;
 
+			if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n",
+					FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
+			usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
 			pCrop = kmalloc(sizeof(SENSOR_WINSIZE_INFO_STRUCT), GFP_KERNEL);
 			if (pCrop == NULL) {
 				kfree(pFeaturePara);
@@ -1341,13 +1366,14 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		{
 			SENSOR_FLASHLIGHT_AE_INFO_STRUCT *pFlashInfo = NULL;
 			unsigned long long *pFeaturePara_64 = (unsigned long long *)pFeaturePara;
-			void *usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
+			void *usr_ptr = NULL;
 
 			if (FeatureParaLen < sizeof(unsigned long long)) {
 				kfree(pFeaturePara);
 				PK_PR_ERR("FLASHLIGHT: out of bound writes\n");
 				return -EINVAL;
 			}
+			usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
 			pFlashInfo = kmalloc(sizeof(SENSOR_FLASHLIGHT_AE_INFO_STRUCT), GFP_KERNEL);
 
 			if (pFlashInfo == NULL) {
@@ -1381,14 +1407,16 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 #define PDAF_DATA_SIZE 4096
 			char *pPdaf_data = NULL;
 			unsigned long long *pFeaturePara_64 = (unsigned long long *)pFeaturePara;
-			void *usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
-			kal_uint32 buf_sz = (kal_uint32) (*(pFeaturePara_64 + 2));
+			void *usr_ptr = NULL;
+			kal_uint32 buf_sz = 0;
 
 			if (FeatureParaLen < sizeof(unsigned long long)*3) {
 				kfree(pFeaturePara);
 				PK_PR_ERR("4CELL_DATA: out of bound writes\n");
 				return -EINVAL;
 			}
+			usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
+			buf_sz = (kal_uint32) (*(pFeaturePara_64 + 2));
 			/* buffer size exam */
 			if (buf_sz > PDAF_DATA_SIZE) {
 				kfree(pFeaturePara);

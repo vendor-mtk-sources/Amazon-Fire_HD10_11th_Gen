@@ -11,33 +11,40 @@ AMAZON WILL NOT BE LIABLE FOR ANY DAMAGES OF ANY KIND ARISING FROM THE USE OF
 THE BUILD MATERIALS INCLUDING, BUT NOT LIMITED TO, DIRECT, INDIRECT,
 INCIDENTAL, PUNITIVE, AND CONSEQUENTIAL DAMAGES.
 
+
 BUILDING THE KERNEL
 -------------------
-You will need the files platform.tar and build_kernel.tar.gz (or build.tar.gz)
-from the tarball to build the kernel.
 
-1.  You may need to install prerequisite libraries. On a Debian-based system:
+1. You may need to install prerequisite libraries. On a Debian-based system:
 
-    sudo apt-get install libssl-dev
-    sudo apt-get install lib32stdc++6
-    
-2.  You may need to change /bin/sh to bash:
+    $ sudo apt-get install -y \
+        git gnupg flex bison gperf build-essential zip curl \
+        zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev \
+        x11proto-core-dev libx11-dev lib32z-dev ccache libgl1-mesa-dev \
+        libxml2-utils xsltproc unzip python lib32z1 lib32stdc++6 libssl-dev \
+        libswitch-perl swig maven libncurses5 xxd bc vim
+
+2. You may need to install pycryptodome
+
+   $ curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+   $ python2 get-pip.py
+   $ pip install pycryptodome
+
+3. You may need to change /bin/sh to bash:
 
     sudo mv /bin/sh /bin/sh.orig
     sudo ln -s /bin/bash /bin/sh
 
-3.	Build may use prebuilt binary minigzip, a 32-bit binary, and if you are
-    using 64-bit Linux, you may need to install additional libraries:
+4. Build may use prebuilt binary minigzip, a 32-bit binary, and if you are
+   using 64-bit Linux, you may need to install additional libraries:
 
-	Ubuntu 12.04:
-	sudo sh -c "echo 'foreign-architecture i386' > /etc/dpkg/dpkg.cfg.d/multiarch"
-	sudo apt-get update
-	sudo apt-get install multiarch-support
-	sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+        Ubuntu 12.04:
+        sudo sh -c "echo 'foreign-architecture i386' > /etc/dpkg/dpkg.cfg.d/multiarch"
+        sudo apt-get update
+        sudo apt-get install multiarch-support
+        sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
-4.  Extract build_kernel.tar.gz or build.tar.gz tarball if either exists.
-
-5.  Check build_kernel_config.sh if any additional compilers are needed. 
+5.  Check build_kernel_config.sh if any additional compilers are needed.
 
 6.  Execute the script by running:
 
@@ -46,28 +53,20 @@ from the tarball to build the kernel.
 
 BUILDING BUSYBOX (if applicable)
 --------------------------------
-You will need the files platform.tar and build.tar.gz from the
-tarball to build busybox.
 
-1.  Extract build.tar.gz tarball if it exists.
+1.  Check build_busybox_config.sh if any additional compilers are needed.
 
-2.  Check build_busybox_config.sh if any additional compilers are needed. 
-
-3.  Execute the script by running:
+2.  Execute the script by running:
 
     ./build_busybox.sh "<path to platform.tar>" "<target output directory>"
 
 
 BUILDING UBOOT (if applicable)
 ------------------------------
-You will need the files platform.tar and build.tar.gz from the
-tarball to build uboot.
 
-1.  Extract build.tar.gz tarball if it exists.
+1.  Check build_uboot_config.sh if any additional compilers are needed.
 
-2.  Check build_uboot_config.sh if any additional compilers are needed. 
-
-3.  Execute the script by running:
+2.  Execute the script by running:
 
     ./build_uboot.sh "<path to platform.tar>" "<target output directory>"
 
@@ -92,7 +91,7 @@ checked out source code, modifying files in place if needed.
 
 4. Build the source code per the instructions in
 https://source.android.com/source/building.html .  For the purposes of testing
-the libraries, we used the target "aosp_flo-userdebug" as the target of the 'lunch'
+the libraries, we used the target "aosp_walleye-userdebug" as the target of the 'lunch'
 command.
 
 5. Upon completion of the build, the relevant libraries can be found under the

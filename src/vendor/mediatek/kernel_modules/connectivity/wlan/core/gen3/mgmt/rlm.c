@@ -1388,12 +1388,13 @@ static UINT_8 rlmRecIeInfoForClient(P_ADAPTER_T prAdapter, P_BSS_INFO_T prBssInf
 			       prChannelSwitchIE->ucChannelSwitchMode,
 			       prChannelSwitchIE->ucChannelSwitchCount);
 
-			if (prChannelSwitchIE->ucChannelSwitchMode == 1) {
+			if (prChannelSwitchIE->ucChannelSwitchMode == 1
+				&& prChannelSwitchIE->ucChannelSwitchCount > 0) {
 				/* STA shall transmit no further frames until the scheduled channel switch */
 				qmSetStaRecTxAllowed(prAdapter, prStaRec, FALSE);
 				DBGLOG(RLM, INFO, "Before switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
 			}
-			if (prChannelSwitchIE->ucChannelSwitchCount) {
+			if (prChannelSwitchIE->ucChannelSwitchCount > 0) {
 				prCsaParam->fgReadyToSwitch = TRUE;
 				prCsaParam->ucNewChannel = prChannelSwitchIE->ucNewChannelNum;
 				cnmTimerStopTimer(prAdapter, &prBssInfo->rCsaTimer);

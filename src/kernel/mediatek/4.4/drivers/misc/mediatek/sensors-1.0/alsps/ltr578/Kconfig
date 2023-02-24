@@ -1,0 +1,3 @@
+config MTK_LTR578
+	bool "ltr578 alsps sensor for MediaTek package"
+	default n

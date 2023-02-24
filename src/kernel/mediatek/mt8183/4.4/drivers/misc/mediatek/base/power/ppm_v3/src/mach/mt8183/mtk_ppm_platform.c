@@ -311,7 +311,7 @@ unsigned int ppm_calc_total_power(struct ppm_cluster_status *cluster_status,
 
 unsigned int mt_ppm_thermal_get_power_big_max_opp(unsigned int opp)
 {
-	struct ppm_cluster_status status[NR_PPM_CLUSTERS];
+	struct ppm_cluster_status status[NR_PPM_CLUSTERS + 1];
 	int i;
 	int power;
 

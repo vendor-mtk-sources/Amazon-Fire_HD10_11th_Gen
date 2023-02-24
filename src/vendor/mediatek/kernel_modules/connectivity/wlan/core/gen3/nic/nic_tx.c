@@ -1587,38 +1587,31 @@ VOID nicTxFreeDescTemplate(IN P_ADAPTER_T prAdapter, IN P_STA_RECORD_T prStaRec)
 	UINT_8 ucTid;
 	UINT_8 ucTxDescSize;
 	P_HW_MAC_TX_DESC_T prTxDesc;
+	void *prFirstTxDesc;
 
 	DBGLOG(TX, TRACE, "Free TXD template for STA[%u] QoS[%u]\n", prStaRec->ucIndex, prStaRec->fgIsQoS);
 
-	if (prStaRec->fgIsQoS) {
-		for (ucTid = 0; ucTid < TX_DESC_TID_NUM; ucTid++) {
-			prTxDesc = (P_HW_MAC_TX_DESC_T) prStaRec->aprTxDescTemplate[ucTid];
+	prFirstTxDesc = prStaRec->aprTxDescTemplate[0];
+	for (ucTid = 0; ucTid < TX_DESC_TID_NUM; ucTid++) {
+		prTxDesc = (P_HW_MAC_TX_DESC_T) prStaRec->aprTxDescTemplate[ucTid];
 
-			if (prTxDesc) {
-				if (HAL_MAC_TX_DESC_IS_LONG_FORMAT(prTxDesc))
-					ucTxDescSize = NIC_TX_DESC_LONG_FORMAT_LENGTH;
-				else
-					ucTxDescSize = NIC_TX_DESC_SHORT_FORMAT_LENGTH;
-
-				kalMemFree(prTxDesc, VIR_MEM_TYPE, ucTxDescSize);
-
-				prTxDesc = prStaRec->aprTxDescTemplate[ucTid] = NULL;
-			}
-		}
-	} else {
-		prTxDesc = (P_HW_MAC_TX_DESC_T) prStaRec->aprTxDescTemplate[0];
 		if (prTxDesc) {
+			if (ucTid > 0 && prTxDesc == prFirstTxDesc)
+				break;
 			if (HAL_MAC_TX_DESC_IS_LONG_FORMAT(prTxDesc))
 				ucTxDescSize = NIC_TX_DESC_LONG_FORMAT_LENGTH;
 			else
 				ucTxDescSize = NIC_TX_DESC_SHORT_FORMAT_LENGTH;
 
 			kalMemFree(prTxDesc, VIR_MEM_TYPE, ucTxDescSize);
-			prTxDesc = NULL;
+
+			prTxDesc = prStaRec->aprTxDescTemplate[ucTid] = NULL;
 		}
-		for (ucTid = 0; ucTid < TX_DESC_TID_NUM; ucTid++)
-			prStaRec->aprTxDescTemplate[ucTid] = NULL;
 	}
+
+	for (ucTid = 0; ucTid < TX_DESC_TID_NUM; ucTid++)
+		prStaRec->aprTxDescTemplate[ucTid] = NULL;
+
 }
 
 /*----------------------------------------------------------------------------*/

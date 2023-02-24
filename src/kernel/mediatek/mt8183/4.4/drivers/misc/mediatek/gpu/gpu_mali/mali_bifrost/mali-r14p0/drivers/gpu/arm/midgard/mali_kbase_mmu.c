@@ -466,7 +466,7 @@ static bool page_fault_try_alloc(struct kbase_context *kctx,
 
 	if (new_pages) {
 		/* Allocation was unsuccessful */
-		int max_pool_level = pool_level;
+		int max_pool_level = min(pool_level, MAX_POOL_LEVEL - 1);
 
 		pool = root_pool;
 

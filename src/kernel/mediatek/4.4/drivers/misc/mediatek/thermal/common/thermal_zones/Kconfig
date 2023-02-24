@@ -1,0 +1,20 @@
+
+menuconfig MTK_THERMAL
+	bool "MediaTek Thermal Zone"
+	help
+	    Config MTK thernal zone drivers.
+
+if MTK_THERMAL
+config MTK_THERMAL_ZONE_BATTERY
+	bool "MTK Thermal Zone Battery"
+	depends on THERMAL
+	help
+	    Enable battery thermal zone.
+
+config VIRTUAL_SENSOR_THERMAL_MTK_BATTERY
+	bool "MTK Virtual Thermal Sensor Battery"
+	depends on VIRTUAL_SENSOR_THERMAL
+	help
+	    Enable battery virtual thermal sensor.
+
+endif

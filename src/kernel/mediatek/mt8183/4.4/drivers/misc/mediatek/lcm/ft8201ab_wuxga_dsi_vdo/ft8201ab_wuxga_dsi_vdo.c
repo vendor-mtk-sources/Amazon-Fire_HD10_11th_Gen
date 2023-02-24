@@ -113,6 +113,7 @@ static LCM_UTIL_FUNCS lcm_util = {
 	lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)
 
 #define VID_FTAB_STARRY_BOE   0x10  /* Starry, using FT8201AB IC */
+#define VID_FTAB_KD_INX       0x17  /* KD, using FT8201AB IC */
 #define VID_RSV_EXT_CODE      0x02  /* ID extension code */
 #define VID_NULL              0xff	/* NULL */
 #define RSVD_CODE             0x81	/* NULL */
@@ -458,7 +459,8 @@ unsigned int ft8201ab_incell_compare_id(void)
 	LCM_LOGI("%s", __func__);
 
 	/* lcm id get from Lk */
-	if (g_vendor_id == VID_FTAB_STARRY_BOE)
+	if ((g_vendor_id == VID_FTAB_STARRY_BOE) ||
+		(g_vendor_id == VID_FTAB_KD_INX))
 		return g_vendor_id;
 	else
 		return VID_NULL;
@@ -690,6 +692,7 @@ static void init_lcm_registers(void)
 
 	switch (g_vendor_id) {
 	case VID_FTAB_STARRY_BOE:
+	case VID_FTAB_KD_INX:
 		LCM_LOGI("init lcm(id=0x%x) registers", g_vendor_id);
 
 		push_table(init_setting,

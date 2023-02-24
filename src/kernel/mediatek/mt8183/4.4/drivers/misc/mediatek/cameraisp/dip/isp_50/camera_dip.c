@@ -2363,6 +2363,18 @@ static signed int DIP_P2_BufQue_CTRL_FUNC(struct DIP_P2_BUFQUE_STRUCT param)
 			ret =  -EFAULT;
 			return ret;
 		}
+		if (property < 0 || property >= DIP_P2_BUFQUE_PROPERTY_NUM) {
+			spin_unlock(&(SpinLock_P2FrameList));
+			LOG_ERR("property is out of range");
+			ret =  -EFAULT;
+			return ret;
+		}
+		if (idx2 < 0 || idx2 >= _MAX_SUPPORT_P2_FRAME_NUM_) {
+			spin_unlock(&(SpinLock_P2FrameList));
+			LOG_ERR("idx2 is out of range");
+			ret =  -EFAULT;
+			return ret;
+		}
 		if (param.ctrl == DIP_P2_BUFQUE_CTRL_DEQUE_SUCCESS)
 			P2_FrameUnit_List[property][idx2].bufSts = DIP_P2_BUF_STATE_DEQUE_SUCCESS;
 		else

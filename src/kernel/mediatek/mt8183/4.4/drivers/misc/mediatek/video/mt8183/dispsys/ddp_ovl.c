@@ -189,6 +189,7 @@ static inline enum DISP_MODULE_ENUM ovl_index_to_module(int index)
 	if (index >= OVL_NUM) {
 		DDPPR_ERR("invalid ovl index=%d\n", index);
 		ASSERT(0);
+		index = OVL_NUM - 1;
 	}
 
 	return ovl_index_module[index];

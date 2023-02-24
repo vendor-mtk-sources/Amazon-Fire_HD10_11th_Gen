@@ -1,0 +1,8 @@
+config SENSORS_TCS3430
+	tristate "AMS-TAOS TCS3430 ALS/COLOR Sensor"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for the ams-taos tcs3430 als/color sensor.
+	  This driver can also be built as a module.  If so, the module
+	  will be called tcs3430.ko.

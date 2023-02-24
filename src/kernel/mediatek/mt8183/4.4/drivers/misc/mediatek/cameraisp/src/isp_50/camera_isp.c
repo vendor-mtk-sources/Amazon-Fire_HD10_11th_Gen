@@ -2169,6 +2169,21 @@ EXIT:
 	IspInfo.IrqInfo.MarkedFlag[WaitIrq->Type][WaitIrq->EventInfo.St_type][WaitIrq->EventInfo.UserKey]) {
 		IspInfo.IrqInfo.MarkedFlag[WaitIrq->Type][WaitIrq->EventInfo.St_type][WaitIrq->EventInfo.UserKey] &=
 		(~WaitIrq->EventInfo.Status);
+		if (WaitIrq->Type < 0 || WaitIrq->Type >= ISP_IRQ_TYPE_AMOUNT) {
+			spin_unlock_irqrestore(&(IspInfo.SpinLockIrq[WaitIrq->Type]), flags);
+			LOG_NOTICE("WaitIrq->Type is out of range\n");
+			return -EFAULT;
+		}
+		if (idx < 0 || idx >= 32) {
+			spin_unlock_irqrestore(&(IspInfo.SpinLockIrq[WaitIrq->Type]), flags);
+			LOG_NOTICE("idx is out of range\n");
+			return -EFAULT;
+		}
+		if (WaitIrq->EventInfo.UserKey < 0 || WaitIrq->EventInfo.UserKey >= IRQ_USER_NUM_MAX) {
+			spin_unlock_irqrestore(&(IspInfo.SpinLockIrq[WaitIrq->Type]), flags);
+			LOG_NOTICE("WaitIrq->EventInfo.UserKey is out of range\n");
+			return -EFAULT;
+		}
 		IspInfo.IrqInfo.MarkedTime_usec[WaitIrq->Type][idx][WaitIrq->EventInfo.UserKey] = 0;
 		IspInfo.IrqInfo.MarkedTime_sec[WaitIrq->Type][idx][WaitIrq->EventInfo.UserKey] = 0;
 		IspInfo.IrqInfo.PassedBySigCnt[WaitIrq->Type][idx][WaitIrq->EventInfo.UserKey] = 0;

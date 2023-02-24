@@ -2198,8 +2198,10 @@ static ssize_t cfgWrite(struct file *filp, const char __user *buf, size_t count,
 	UINT_32 u4CopySize = sizeof(aucCfgBuf);
 	UINT_8 token_num = 1;
 
-	if (!count)
-		return -EINVAL;
+	if (count == 0) {
+		DBGLOG(INIT, ERROR, "wrong copy size\n");
+		return -EFAULT;
+	}
 
 	kalMemSet(aucCfgBuf, 0, u4CopySize);
 
@@ -2223,9 +2225,9 @@ static ssize_t cfgWrite(struct file *filp, const char __user *buf, size_t count,
 
 	if (token_num == 1) {
 		kalMemSet(aucCfgQueryKey, 0, sizeof(aucCfgQueryKey));
+		u4CopySize = (u4CopySize < sizeof(aucCfgQueryKey)) ?
+			u4CopySize : (sizeof(aucCfgQueryKey) - 1);
 		/* remove the 0x0a */
-		if (u4CopySize > sizeof(aucCfgQueryKey))
-			return -EINVAL;
 		memcpy(aucCfgQueryKey, aucCfgBuf, u4CopySize);
 		if (aucCfgQueryKey[u4CopySize - 1] == 0x0a)
 			aucCfgQueryKey[u4CopySize - 1] = '\0';

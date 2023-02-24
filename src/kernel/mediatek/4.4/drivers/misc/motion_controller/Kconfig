@@ -1,0 +1,7 @@
+comment "motion controller module"
+
+config MOTION_CONTROL
+	tristate "Motion control support"
+	depends on SPI
+	help
+	  An Motion Control module for abc123. Say Y when you want to support this tool.

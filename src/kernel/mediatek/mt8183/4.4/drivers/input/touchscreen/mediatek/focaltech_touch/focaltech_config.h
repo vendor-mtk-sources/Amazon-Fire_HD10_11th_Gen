@@ -205,7 +205,7 @@
 /*
  * Numbers of modules support
  */
-#define FTS_GET_MODULE_NUM                      7
+#define FTS_GET_MODULE_NUM                      8
 
 /*
  * module_id: mean vendor_id generally, also maybe gpio or lcm_id...
@@ -221,6 +221,7 @@
 #define FTS_MODULE5_ID                         0xE7E4
 #define FTS_MODULE6_ID                         0xC4AA
 #define FTS_MODULE7_ID                         0xC5AB
+#define FTS_MODULE8_ID                         0xE8E5
 
 
 /*
@@ -238,6 +239,7 @@
 #define FTS_MODULE5_NAME                       "FC_FW_KD_INX_V0xe5_all"
 #define FTS_MODULE6_NAME                       "FC_FW_ST_BOE_V0xc2_all"
 #define FTS_MODULE7_NAME                       "FC_AB_FW_ST_BOE_V0xc2_all"
+#define FTS_MODULE8_NAME                       "FC_AB_FW_KD_INX_V0xe2_all"
 
 
 
@@ -283,6 +285,14 @@
  * define your own fw_file, the sample one is invalid
  */
 #define FTS_UPGRADE_FW7_FILE                     "include/firmware/fw_sample.i"
+
+/*********************************************************/
+
+/*
+ * if FTS_GET_MODULE_NUM >= 8, fw corrsponding with FTS_VENDOR_ID8
+ * define your own fw_file, the sample one is invalid
+ */
+#define FTS_UPGRADE_FW8_FILE                     "include/firmware/fw_sample.i"
 
 /*********************************************************/
 

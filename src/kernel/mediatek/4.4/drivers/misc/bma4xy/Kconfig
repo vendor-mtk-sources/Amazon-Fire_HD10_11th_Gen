@@ -1,0 +1,23 @@
+#
+# Makefile for Bosch sensors driver.
+#
+config BOSCH_DRIVER_LOG_FUNC
+	tristate "Bosch Sensortec driver smart log function support"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	help
+	 If you say yes here, you get support for smart log function in Bosch Sensortec driver.
+
+config SENSORS_BMA456
+	tristate "BMA456 Sensor Support"
+	default y
+	depends on I2C && SYSFS
+	help
+	If you say yes here, you get support for Bosch Sensortec's sensor driver of BMA456.
+
+config BMA4XY_LOAD_CONFIG_FILE_IN_INIT
+	bool "BMA4XY Sensor configuration loading at boot time support"
+	default y
+	depends on SENSORS_BMA456
+	help
+	 If you say yes here, the bma456 configuration is loaded at boot time
+	 else user has to load the configuration through SYSFS before using the sensor.

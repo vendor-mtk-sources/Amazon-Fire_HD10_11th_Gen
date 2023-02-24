@@ -363,7 +363,7 @@ EXPORT_SYMBOL(mdump_mark_reboot_reason);
 
 static struct mdbinattr s_mdump_pblmsg = {
 	{
-		{ .name = "pblmsg", .mode = S_IRUGO },
+		{ .name = "pblmsg", .mode = (S_IRUSR|S_IRGRP) },
 		.size = 0,
 		.read = mdump_binary_read,
 		.write = mdump_binary_write
@@ -373,7 +373,7 @@ static struct mdbinattr s_mdump_pblmsg = {
 };
 static struct mdbinattr s_mdump_lkmsg = {
 	{
-		{ .name = "lkmsg", .mode = S_IRUGO },
+		{ .name = "lkmsg", .mode = (S_IRUSR|S_IRGRP) },
 		.size = 0,
 		.read = mdump_binary_read,
 		.write = mdump_binary_write

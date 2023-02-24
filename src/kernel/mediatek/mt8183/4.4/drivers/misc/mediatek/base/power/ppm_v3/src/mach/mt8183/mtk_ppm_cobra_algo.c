@@ -170,7 +170,7 @@ void ppm_cobra_update_limit(void *user_req)
 {
 	struct ppm_policy_req *req;
 	int power_budget;
-	int opp[NR_PPM_CLUSTERS];
+	int opp[NR_PPM_CLUSTERS + 1];
 	int active_core[NR_PPM_CLUSTERS];
 #if PPM_COBRA_USE_CORE_LIMIT
 	int core_limit_tmp[NR_PPM_CLUSTERS];
@@ -561,6 +561,9 @@ static unsigned int get_limit_opp_and_budget(void)
 			cobra_lookup_data.limit[PPM_CLUSTER_B].opp = j;
 
 			for_each_ppm_clusters(k) {
+				if (k >= NR_PPM_CLUSTERS)
+					break;
+
 				if (!cobra_lookup_data.limit[k].core)
 					continue;
 

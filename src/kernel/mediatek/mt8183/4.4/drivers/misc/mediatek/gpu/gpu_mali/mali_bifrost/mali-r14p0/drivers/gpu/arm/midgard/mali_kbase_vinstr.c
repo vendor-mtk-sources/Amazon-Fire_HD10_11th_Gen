@@ -535,11 +535,11 @@ static void kbasep_vinstr_destroy_kctx(struct kbase_vinstr_context *vinstr_ctx)
 	if (!found)
 		dev_warn(kbdev->dev, "kctx not in kctx_list\n");
 
-	/* Destroy context. */
-	kbase_destroy_context(vinstr_ctx->kctx);
-
 	/* Inform timeline client about context destruction. */
 	KBASE_TLSTREAM_TL_DEL_CTX(vinstr_ctx->kctx);
+
+	/* Destroy context. */
+	kbase_destroy_context(vinstr_ctx->kctx);
 
 	vinstr_ctx->kctx = NULL;
 }

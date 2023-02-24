@@ -76,6 +76,7 @@ static ssize_t CAMERA_HW_Reg_Debug(struct file *file, const char *buffer, size_t
 	char regBuf[64] = { '\0' };
 	u32 u4CopyBufSize = (count < (sizeof(regBuf) - 1)) ? (count) : (sizeof(regBuf) - 1);
 	struct IMGSENSOR_SENSOR *psensor = &gimgsensor.sensor[IMGSENSOR_SENSOR_IDX_MAIN];
+	int i4Len = 0;
 
 	MSDK_SENSOR_REG_INFO_STRUCT sensorReg;
 
@@ -83,6 +84,9 @@ static ssize_t CAMERA_HW_Reg_Debug(struct file *file, const char *buffer, size_t
 
 	if (psensor == NULL || copy_from_user(regBuf, buffer, u4CopyBufSize))
 		return -EFAULT;
+
+	i4Len = sizeof(regBuf);
+	regBuf[i4Len-1] = '\0';
 
 	if (sscanf(regBuf, "%x %x", &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
 		imgsensor_sensor_feature_control(psensor, SENSOR_FEATURE_SET_REGISTER,
@@ -115,6 +119,7 @@ static ssize_t CAMERA_HW_Reg_Debug2(struct file *file, const char *buffer, size_
 	char regBuf[64] = { '\0' };
 	u32 u4CopyBufSize = (count < (sizeof(regBuf) - 1)) ? (count) : (sizeof(regBuf) - 1);
 	struct IMGSENSOR_SENSOR *psensor = &gimgsensor.sensor[IMGSENSOR_SENSOR_IDX_SUB];
+	int i4Len = 0;
 
 	MSDK_SENSOR_REG_INFO_STRUCT sensorReg;
 
@@ -122,6 +127,9 @@ static ssize_t CAMERA_HW_Reg_Debug2(struct file *file, const char *buffer, size_
 
 	if (psensor == NULL || copy_from_user(regBuf, buffer, u4CopyBufSize))
 		return -EFAULT;
+
+	i4Len = sizeof(regBuf);
+	regBuf[i4Len-1] = '\0';
 
 	if (sscanf(regBuf, "%x %x", &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
 		imgsensor_sensor_feature_control(psensor, SENSOR_FEATURE_SET_REGISTER,
@@ -153,6 +161,7 @@ static ssize_t CAMERA_HW_Reg_Debug3(struct file *file, const char *buffer, size_
 	char regBuf[64] = { '\0' };
 	u32 u4CopyBufSize = (count < (sizeof(regBuf) - 1)) ? (count) : (sizeof(regBuf) - 1);
 	struct IMGSENSOR_SENSOR *psensor = &gimgsensor.sensor[IMGSENSOR_SENSOR_IDX_MAIN2];
+	int i4Len = 0;
 
 	MSDK_SENSOR_REG_INFO_STRUCT sensorReg;
 
@@ -160,6 +169,9 @@ static ssize_t CAMERA_HW_Reg_Debug3(struct file *file, const char *buffer, size_
 
 	if (psensor == NULL || copy_from_user(regBuf, buffer, u4CopyBufSize))
 		return -EFAULT;
+
+	i4Len = sizeof(regBuf);
+	regBuf[i4Len-1] = '\0';
 
 	if (sscanf(regBuf, "%x %x", &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
 		imgsensor_sensor_feature_control(psensor, SENSOR_FEATURE_SET_REGISTER,
@@ -190,6 +202,7 @@ static ssize_t CAMERA_HW_Reg_Debug4(struct file *file, const char *buffer, size_
 	char regBuf[64] = { '\0' };
 	u32 u4CopyBufSize = (count < (sizeof(regBuf) - 1)) ? (count) : (sizeof(regBuf) - 1);
 	struct IMGSENSOR_SENSOR *psensor = &gimgsensor.sensor[IMGSENSOR_SENSOR_IDX_SUB2];
+	int i4Len = 0;
 
 	MSDK_SENSOR_REG_INFO_STRUCT sensorReg;
 
@@ -197,6 +210,9 @@ static ssize_t CAMERA_HW_Reg_Debug4(struct file *file, const char *buffer, size_
 
 	if (psensor == NULL || copy_from_user(regBuf, buffer, u4CopyBufSize))
 		return -EFAULT;
+
+	i4Len = sizeof(regBuf);
+	regBuf[i4Len-1] = '\0';
 
 	if (sscanf(regBuf, "%x %x", &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
 		imgsensor_sensor_feature_control(psensor, SENSOR_FEATURE_SET_REGISTER,

@@ -1542,6 +1542,12 @@ static void nl_data_handler(struct sk_buff *skb)
 
 	size = fgd_msg->fgd_ret_data_len + FGD_NL_MSG_T_HDR_LEN;
 
+	/* protection from malicious process */
+	if (fgd_msg->fgd_ret_data_len > FGD_NL_MSG_MAX_LEN) {
+		bm_err("illegal fgd_ret_data_len data length, ignore it.");
+		return;
+	}
+
 	fgd_ret_msg = vmalloc(size);
 	if (!fgd_ret_msg)
 		return;

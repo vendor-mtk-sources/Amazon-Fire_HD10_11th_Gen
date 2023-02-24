@@ -79,7 +79,7 @@ static const struct i2c_device_id ccu_i2c_main_ids[] = { {CCU_I2C_MAIN_HW_DRVNAM
 static const struct i2c_device_id ccu_i2c_main2_ids[] = { {CCU_I2C_MAIN2_HW_DRVNAME, 0}, {} };
 static const struct i2c_device_id ccu_i2c_main3_ids[] = { {CCU_I2C_MAIN3_HW_DRVNAME, 0}, {} };
 static const struct i2c_device_id ccu_i2c_sub_ids[] = { {CCU_I2C_SUB_HW_DRVNAME, 0}, {} };
-static struct ion_handle *i2c_buffer_handle[CCU_I2C_CHANNEL_MAX];
+uint32_t i2c_mva[CCU_I2C_CHANNEL_MAX];
 static bool ccu_i2c_initialized[CCU_I2C_CHANNEL_MAX] = {0};
 
 #ifdef CONFIG_OF
@@ -298,8 +298,9 @@ int ccu_get_i2c_dma_buf_addr(struct ccu_i2c_buf_mva_ioarg *ioarg)
 		return ret;
 
 	/*If there is existing i2c buffer mva allocated, deallocate it first*/
-	ccu_deallocate_mva(&i2c_buffer_handle[ioarg->i2c_controller_id]);
-	ret = ccu_allocate_mva(&ioarg->mva, va, &i2c_buffer_handle[ioarg->i2c_controller_id], 4096);
+	ccu_deallocate_mva(i2c_mva[ioarg->i2c_controller_id]);
+	ret = ccu_allocate_mva(&i2c_mva[ioarg->i2c_controller_id], va, 4096);
+	ioarg->mva = i2c_mva[ioarg->i2c_controller_id];
 
 	return ret;
 }
@@ -310,7 +311,7 @@ int ccu_i2c_free_dma_buf_mva_all(void)
 	int i;
 
 	for (i = CCU_I2C_CHANNEL_MIN ; i < CCU_I2C_CHANNEL_MAX ; i++)
-		ccu_deallocate_mva(&i2c_buffer_handle[i]);
+		ccu_deallocate_mva(i2c_mva[i]);
 
 	LOG_INF_MUST("ccu_i2c_free_dma_buf_mva_all done.\n");
 

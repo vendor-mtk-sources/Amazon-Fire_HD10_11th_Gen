@@ -98,6 +98,7 @@
 #endif
 #include "mtk_ovl.h"
 #include "mtk_dramc.h"
+#include <linux/fb.h>
 
 #define MMSYS_CLK_LOW (0)
 #define MMSYS_CLK_HIGH (1)
@@ -5090,6 +5091,7 @@ static int _primary_display_free_fb_buf_nolock(void)
 {
 	unsigned long va_start = 0;
 	unsigned long va_end = 0;
+	struct fb_info *fbi;
 #ifdef MTKFB_M4U_SUPPORT
 	int ret = 0;
 #endif
@@ -5115,6 +5117,14 @@ static int _primary_display_free_fb_buf_nolock(void)
 		pgc->framebuffer_pa = 0x0;
 		mtkfb_reset_fb_base();
 		mtkfb_reset_fb_size();
+
+		fbi = mtkfb_get_fb_info();
+		if (fbi) {
+			fbi->fix.smem_start = 0;
+			fbi->fix.smem_len = 0;
+			fbi->screen_base = 0;
+		}
+
 		pr_info("%s done\n", __func__);
 	}
 
@@ -9012,11 +9022,13 @@ int primary_display_capture_framebuffer_ovl(unsigned long pbuf, enum UNIFIED_COL
 		goto out;
 	}
 
-	ion_display_handle = disp_ion_alloc(ion_display_client,
-					    ION_HEAP_MULTIMEDIA_MAP_MVA_MASK,
-					    pbuf, buffer_size);
+	/*
+	 * TODO: legacy ion_handle allocate API phase out,
+	 *	need develop another method allocate MVA
+	 */
+
 	if (!ion_display_handle) {
-		DISPPR_ERROR("primary capture:Fail to allocate buffer\n");
+		DISPMSG("primary capture: return because no buffer to use.\n");
 		ret = -1;
 		goto out;
 	}

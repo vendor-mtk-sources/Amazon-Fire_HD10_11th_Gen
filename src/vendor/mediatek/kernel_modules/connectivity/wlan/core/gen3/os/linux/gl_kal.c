@@ -1055,6 +1055,8 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 
 		/* switch netif on */
 		netif_carrier_on(prGlueInfo->prDevHandler);
+		/*indicate the FT roaming updata FT IE is  Auth*/
+		prGlueInfo->fgIsFtAuth = 1;
 
 		do {
 			/* print message on console */
@@ -1242,10 +1244,29 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 			cfg80211_disconnected(prGlueInfo->prDevHandler, u2DeauthReason, NULL, 0, GFP_KERNEL);
 #endif
 		}
-		kalMemFree(prGlueInfo->rFtIeForTx.pucIEBuf, VIR_MEM_TYPE, prGlueInfo->rFtIeForTx.u4IeLength);
-		kalMemZero(&prGlueInfo->rFtIeForTx, sizeof(prGlueInfo->rFtIeForTx));
+
+		if (!prGlueInfo->rFtIeForAuthTx.pucIEBuf)
+			kalMemFree(prGlueInfo->rFtIeForAuthTx.pucIEBuf, VIR_MEM_TYPE,
+				   prGlueInfo->rFtIeForAuthTx.u4IeLength);
+		if (!prGlueInfo->rFtIeForAssocTx.pucIEBuf)
+			kalMemFree(prGlueInfo->rFtIeForAssocTx.pucIEBuf, VIR_MEM_TYPE,
+				   prGlueInfo->rFtIeForAssocTx.u4IeLength);
+
+		kalMemZero(&prGlueInfo->rFtIeForAuthTx,
+			   sizeof(prGlueInfo->rFtIeForAuthTx));
+		kalMemZero(&prGlueInfo->rFtIeForAssocTx,
+			   sizeof(prGlueInfo->rFtIeForAssocTx));
 
 		prGlueInfo->eParamMediaStateIndicated = PARAM_MEDIA_STATE_DISCONNECTED;
+#if CFG_SUPPORT_RSSI_STATISTICS
+		if (prGlueInfo->prAdapter->prAisBssInfo) {
+			wlanGetTxRxCount(prGlueInfo->prAdapter, prGlueInfo->prAdapter->prAisBssInfo->ucBssIndex);
+			prGlueInfo->prAdapter->ucAisConnectionStatus = 3;
+		}
+		else
+			DBGLOG(AIS, INFO, "[wifi] prAisBssInfo is Null get count fail\n");
+#endif
+
 
 		break;
 
@@ -1261,7 +1282,14 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 
 		DBGLOG(AIS, INFO, "[wifi] %s netif_carrier_off locally\n",
 				    prGlueInfo->prDevHandler->name);
-
+#if CFG_SUPPORT_RSSI_STATISTICS
+		if (prGlueInfo->prAdapter->prAisBssInfo) {
+			wlanGetTxRxCount(prGlueInfo->prAdapter, prGlueInfo->prAdapter->prAisBssInfo->ucBssIndex);
+			prGlueInfo->prAdapter->ucAisConnectionStatus = 3;
+		}
+		else
+			DBGLOG(AIS, INFO, "[wifi] prAisBssInfo is Null get count fail\n");
+#endif
 		netif_carrier_off(prGlueInfo->prDevHandler);
 		prGlueInfo->eParamMediaStateIndicated = PARAM_MEDIA_STATE_DISCONNECTED_LOCALLY;
 		break;
@@ -1362,6 +1390,8 @@ kalIndicateStatusAndComplete(IN P_GLUE_INFO_T prGlueInfo, IN WLAN_STATUS eStatus
 				break;
 			}
 			case ENUM_STATUS_TYPE_FT_AUTH_STATUS:
+				/*this indicate that need udpate the Assoc FT Assoc Ie*/
+				prGlueInfo->fgIsFtAuth = 0;
 				cfg80211_ft_event(prGlueInfo->prDevHandler, &prGlueInfo->rFtEventParam);
 				break;
 
@@ -1996,7 +2026,9 @@ kalSecurityFrameClassifier(IN P_GLUE_INFO_T prGlueInfo,
 			break;
 		}
 
-	} else if (u2EthType == ETH_WPI_1X) {
+	}
+#if CFG_SUPPORT_WAPI
+	else if (u2EthType == ETH_WPI_1X) {
 
 		ucSubType = pucEapol[3]; /* sub type filed*/
 		u2Length = *(PUINT_16)&pucEapol[6];
@@ -2008,6 +2040,7 @@ kalSecurityFrameClassifier(IN P_GLUE_INFO_T prGlueInfo,
 		       ucSubType, u2Length, u2Seq, ucSeqNo);
 
 	}
+#endif
 	prTxPktInfo->u2Flag |= BIT(ENUM_PKT_1X);
 	return TRUE;
 }

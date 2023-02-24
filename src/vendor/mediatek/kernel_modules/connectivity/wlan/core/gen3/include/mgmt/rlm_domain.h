@@ -327,6 +327,9 @@
 #if CFG_PWR_LIMIT_COUNTRY
 #define REGION_CODE_AU (((UINT_16) 'A' << 8) | (UINT_16) 'U')	/* AU */
 #define REGION_CODE_CA (((UINT_16) 'C' << 8) | (UINT_16) 'A')	/* CA */
+#define REGION_CODE_IN (((UINT_16) 'I' << 8) | (UINT_16) 'N')	/* India */
+#define REGION_CODE_BR (((UINT_16) 'B' << 8) | (UINT_16) 'R')	/* Brazil */
+#define REGION_CODE_CN (((UINT_16) 'C' << 8) | (UINT_16) 'N')	/* China */
 #endif
 /*******************************************************************************
 *                             D A T A   T Y P E S
@@ -533,6 +536,8 @@ UINT_16 rlmDomainPwrLimitDefaultTableDecision(P_ADAPTER_T prAdapter, UINT_16 u2C
 VOID rlmDomainSendPwrLimitCmd(P_ADAPTER_T prAdapter);
 #endif
 BOOLEAN rlmIsValidCountryCode(UINT_16 u2Country);
+
+WLAN_STATUS rlmWlanCountryTableInit(void);
 
 UINT_16
 rlmConvertCountry2Region(

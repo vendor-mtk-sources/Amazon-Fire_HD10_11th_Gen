@@ -1,0 +1,45 @@
+idme driver
+
+1. Overview:
+
+idme driver is used to show the information of idme in /proc directory and
+also provide interfaces to access specific item in idme, such as board type,
+bootmode, dev flags.
+
+2. Interfaces for kernel:
+
+Following kernel APIs are exported for other kernel components:
+
+const char *idme_get_item(char *idme_item);
+-This function is used to get the specific idme item value,
+ such as: board_id, boot_mode, dev_flags etc.
+-Return the value on success, NULL on failure.
+
+unsigned int idme_get_board_type(void);
+-This function is used to get the board type in board_id,
+-Return the board type on success, 0 on failure.
+
+unsigned int idme_get_board_rev(void);
+-This function is used to get the board revision in board_id,
+-Return the board revision on success, 0 on failure.
+
+unsigned int idme_get_bootmode(void);
+-This function is used to get boot mode in idme,
+-Return the boot_mode on success, 0 on failure.
+
+u64 idme_get_dev_flags_value(void);
+-This function is used to get dev_flags in idme
+-Return the dev_flags value on success, 0 on failure.
+
+bool board_has_wan(void);
+-This function is used to check whether this board supported WAN.
+-Return true if having WAN, else return false.
+
+3. Interfaces for userspace:
+Directory /proc/idme will be added. It will show the value of idme items. For example:
+
+/proc/idme # ls
+DKB      bootcount   dev_flags      mac_addr      product_name region        t_unlock_code  usr_flags
+KB       bootmode    device_type_id mac_sec       productid    sensorcal     tp_cg_color    wifi_mfg
+alscal   bt_mac_addr fos_flags      manufacturing productid2   serial        unlock_code
+board_id bt_mfg      front_cam_otp  postmode      rear_cam_otp t_unlock_cert unlock_version

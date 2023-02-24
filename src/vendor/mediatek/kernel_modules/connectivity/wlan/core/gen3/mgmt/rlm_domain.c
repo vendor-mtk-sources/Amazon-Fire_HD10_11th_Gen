@@ -32,6 +32,7 @@
 */
 #include "precomp.h"
 #include "rlm_txpwr_init.h"
+#include "abx123_rlm_txpwr_init.h"
 
 /*******************************************************************************
 *                              C O N S T A N T S
@@ -179,8 +180,8 @@ static const UINT_16 g_u2CountryGroup21[] = {
 	COUNTRY_CODE_CA
 };
 
-
-DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
+P_DOMAIN_INFO_ENTRY g_arSupportedRegDomains;
+DOMAIN_INFO_ENTRY default_arSupportedRegDomains[] = {
 	{
 	 (PUINT_16) g_u2CountryGroup0, sizeof(g_u2CountryGroup0) / 2,
 	 {
@@ -611,6 +612,8 @@ DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 	 }
 	}
 };
+UINT_16 REG_DOMAIN_GROUP_NUM =
+	sizeof(default_arSupportedRegDomains) / sizeof(DOMAIN_INFO_ENTRY) ;
 
 static const UINT_16 g_u2CountryGroup0_Passive[] = {
 	COUNTRY_CODE_WW
@@ -638,7 +641,8 @@ static const UINT_16 g_u2CountryGroup4_Passive[] = {
 };
 #endif /* fos_change end */
 
-DOMAIN_INFO_ENTRY arSupportedRegDomains_Passive[] = {
+P_DOMAIN_INFO_ENTRY g_arSupportedRegDomains_Passive;
+DOMAIN_INFO_ENTRY default_arSupportedRegDomains_Passive[] = {
 	{
 	 (PUINT_16) g_u2CountryGroup0_Passive, sizeof(g_u2CountryGroup0_Passive) / 2,
 	 {
@@ -750,6 +754,8 @@ DOMAIN_INFO_ENTRY arSupportedRegDomains_Passive[] = {
 	 }
 	}
 };
+UINT_8 REG_DOMAIN_PASSIVE_GROUP_NUM =
+	sizeof(default_arSupportedRegDomains_Passive) / sizeof(DOMAIN_INFO_ENTRY);
 
 SUBBAND_CHANNEL_T g_rRlmSubBand[] = {
 
@@ -784,7 +790,8 @@ static const UINT_16 g_u2TxPwrRegion5[] = { COUNTRY_CODE_US };
 static const UINT_16 g_u2TxPwrRegion6[] = { COUNTRY_CODE_CA };
 #endif
 
-TX_PWR_REGION_INFO_ENTRY arSupportedTxPwrRegion[] = {
+P_TX_PWR_REGION_INFO_ENTRY g_arSupportedTxPwrRegion;
+TX_PWR_REGION_INFO_ENTRY default_arSupportedTxPwrRegion[] = {
 #if CFG_PWR_LIMIT_COUNTRY
 	{(PUINT_16) g_u2TxPwrRegion5, sizeof(g_u2TxPwrRegion5) / 2,
 	 REGION_CODE_FCC}
@@ -803,6 +810,8 @@ TX_PWR_REGION_INFO_ENTRY arSupportedTxPwrRegion[] = {
 	{(PUINT_16) g_u2TxPwrRegion3, sizeof(g_u2TxPwrRegion3) / 2,
 	 REGION_CODE_JP}
 };
+UINT_32 REG_TX_POWER_GROUP_NUM =
+	sizeof(default_arSupportedTxPwrRegion) / sizeof(TX_PWR_REGION_INFO_ENTRY);
 
 /*******************************************************************************
 *                           P R I V A T E   D A T A
@@ -835,10 +844,7 @@ TX_PWR_REGION_INFO_ENTRY arSupportedTxPwrRegion[] = {
 /*----------------------------------------------------------------------------*/
 P_DOMAIN_INFO_ENTRY rlmDomainGetDomainInfo(P_ADAPTER_T prAdapter)
 {
-#define REG_DOMAIN_GROUP_NUM  \
-	(sizeof(arSupportedRegDomains) / sizeof(DOMAIN_INFO_ENTRY))
-#define REG_DOMAIN_DEF_IDX	(REG_DOMAIN_GROUP_NUM - 1)
-
+	UINT_16 REG_DOMAIN_DEF_IDX = (REG_DOMAIN_GROUP_NUM - 1) ;
 	P_DOMAIN_INFO_ENTRY prDomainInfo;
 	P_REG_INFO_T prRegInfo;
 	UINT_16 u2TargetCountryCode;
@@ -864,7 +870,7 @@ P_DOMAIN_INFO_ENTRY rlmDomainGetDomainInfo(P_ADAPTER_T prAdapter)
 	    prRegInfo->ucRegChannelListIndex < REG_DOMAIN_GROUP_NUM) {
 		/* by given table idx */
 		DBGLOG(RLM, TRACE, "ucRegChannelListIndex=%d\n", prRegInfo->ucRegChannelListIndex);
-		prDomainInfo = &arSupportedRegDomains[prRegInfo->ucRegChannelListIndex];
+		prDomainInfo = &g_arSupportedRegDomains[prRegInfo->ucRegChannelListIndex];
 	} else if (prRegInfo->eRegChannelListMap == REG_CH_MAP_CUSTOMIZED) {
 		/* by customized */
 		prDomainInfo = &prRegInfo->rDomainInfo;
@@ -873,7 +879,7 @@ P_DOMAIN_INFO_ENTRY rlmDomainGetDomainInfo(P_ADAPTER_T prAdapter)
 		u2TargetCountryCode = prAdapter->rWifiVar.rConnSettings.u2CountryCode;
 
 		for (i = 0; i < REG_DOMAIN_GROUP_NUM; i++) {
-			prDomainInfo = &arSupportedRegDomains[i];
+			prDomainInfo = &g_arSupportedRegDomains[i];
 
 			if ((prDomainInfo->u4CountryNum && prDomainInfo->pu2CountryGroup) ||
 			    prDomainInfo->u4CountryNum == 0) {
@@ -889,7 +895,7 @@ P_DOMAIN_INFO_ENTRY rlmDomainGetDomainInfo(P_ADAPTER_T prAdapter)
 		/* If no matched country code, use the default regulatory domain */
 		if (i >= REG_DOMAIN_GROUP_NUM) {
 			DBGLOG(RLM, INFO, "No matched country code, use the default regulatory domain\n");
-			prDomainInfo = &arSupportedRegDomains[REG_DOMAIN_DEF_IDX];
+			prDomainInfo = &g_arSupportedRegDomains[REG_DOMAIN_DEF_IDX];
 		}
 	}
 
@@ -1096,9 +1102,8 @@ VOID rlmDomainSendDomainInfoCmd(P_ADAPTER_T prAdapter)
 /*----------------------------------------------------------------------------*/
 VOID rlmDomainSendPassiveScanInfoCmd(P_ADAPTER_T prAdapter)
 {
-#define REG_DOMAIN_PASSIVE_GROUP_NUM \
-	(sizeof(arSupportedRegDomains_Passive) / sizeof(DOMAIN_INFO_ENTRY))
-#define REG_DOMAIN_PASSIVE_DEF_IDX	(REG_DOMAIN_PASSIVE_GROUP_NUM - 1)
+
+	UINT_8 REG_DOMAIN_PASSIVE_DEF_IDX = REG_DOMAIN_PASSIVE_GROUP_NUM - 1;
 
 	P_DOMAIN_INFO_ENTRY prDomainInfo;
 	P_CMD_SET_DOMAIN_INFO_T prCmd;
@@ -1125,7 +1130,7 @@ VOID rlmDomainSendPassiveScanInfoCmd(P_ADAPTER_T prAdapter)
 	u2TargetCountryCode = prAdapter->rWifiVar.rConnSettings.u2CountryCode;
 
 	for (i = 0; i < REG_DOMAIN_PASSIVE_GROUP_NUM; i++) {
-		prDomainInfo = &arSupportedRegDomains_Passive[i];
+		prDomainInfo = &g_arSupportedRegDomains_Passive[i];
 
 		for (j = 0; j < prDomainInfo->u4CountryNum; j++) {
 			if (prDomainInfo->pu2CountryGroup[j] == u2TargetCountryCode)
@@ -1136,7 +1141,7 @@ VOID rlmDomainSendPassiveScanInfoCmd(P_ADAPTER_T prAdapter)
 	}
 
 	if (i >= REG_DOMAIN_PASSIVE_GROUP_NUM)
-		prDomainInfo = &arSupportedRegDomains_Passive[REG_DOMAIN_PASSIVE_DEF_IDX];
+		prDomainInfo = &g_arSupportedRegDomains_Passive[REG_DOMAIN_PASSIVE_DEF_IDX];
 
 	for (i = 0; i < MAX_SUBBAND_NUM; i++) {
 		prSubBand = &prDomainInfo->rSubBand[i];
@@ -1457,21 +1462,22 @@ rlmDomainCheckPowerLimitValid(P_ADAPTER_T prAdapter,
 /*----------------------------------------------------------------------------*/
 VOID rlmDomainCheckCountryPowerLimitTable(P_ADAPTER_T prAdapter)
 {
-	UINT_8 i, j;
+	UINT_16 i, j;
 	UINT_16 u2CountryCodeTable, u2CountryCodeCheck;
 	BOOLEAN fgChannelValid = FALSE;
 	BOOLEAN fgPowerLimitValid = FALSE;
 	BOOLEAN fgEntryRepetetion = FALSE;
 	BOOLEAN fgTableValid = TRUE;
 
+
 	/*Configuration Table Check */
-	for (i = 0; i < sizeof(g_rRlmPowerLimitConfiguration) / sizeof(COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION); i++) {
+	for (i = 0; i < REG_COUNTRY_POWER_LIMIT_TABLE_NUM ; i++) {
 		/*Table Country Code */
 		WLAN_GET_FIELD_BE16(&g_rRlmPowerLimitConfiguration[i].aucCountryCode[0], &u2CountryCodeTable);
 
 		/*Repetition Entry Check */
 		for (j = i + 1;
-		     j < sizeof(g_rRlmPowerLimitConfiguration) / sizeof(COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+		     j < REG_COUNTRY_POWER_LIMIT_TABLE_NUM ;
 		     j++) {
 
 			WLAN_GET_FIELD_BE16(&g_rRlmPowerLimitConfiguration[j].aucCountryCode[0], &u2CountryCodeCheck);
@@ -1719,14 +1725,14 @@ VOID rlmDomainBuildCmdByDefaultTable(P_CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT_T prC
 /*----------------------------------------------------------------------------*/
 VOID rlmDomainBuildCmdByConfigTable(P_ADAPTER_T prAdapter, P_CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT_T prCmd)
 {
-	UINT_8 i, k;
+	UINT_16 i, k;
 	UINT_16 u2CountryCodeTable = COUNTRY_CODE_NULL;
 	P_CMD_CHANNEL_POWER_LIMIT prCmdPwrLimit;
 	BOOLEAN fgChannelValid;
 
 	/*Build power limit cmd by configuration table information */
 
-	for (i = 0; i < sizeof(g_rRlmPowerLimitConfiguration) / sizeof(COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION); i++) {
+	for (i = 0; i < REG_COUNTRY_POWER_LIMIT_TABLE_NUM; i++) {
 
 		WLAN_GET_FIELD_BE16(&g_rRlmPowerLimitConfiguration[i].aucCountryCode[0], &u2CountryCodeTable);
 
@@ -1977,8 +1983,8 @@ BOOLEAN rlmIsValidCountryCode(UINT_16 u2Country)
 	UINT_8 i = 0, j = 0;
 	P_DOMAIN_INFO_ENTRY prDomainInfo;
 
-	for (i = 0; i < sizeof(arSupportedRegDomains) / sizeof(DOMAIN_INFO_ENTRY); i++) {
-		prDomainInfo = &arSupportedRegDomains[i];
+	for (i = 0; i < REG_DOMAIN_GROUP_NUM; i++) {
+		prDomainInfo = &g_arSupportedRegDomains[i];
 
 		ASSERT((prDomainInfo->u4CountryNum && prDomainInfo->pu2CountryGroup) ||
 			   prDomainInfo->u4CountryNum == 0);
@@ -2002,8 +2008,8 @@ rlmConvertCountry2Region(
 	UINT_32 i = 0, j = 0;
 	P_TX_PWR_REGION_INFO_ENTRY prRegionInfo = NULL;
 
-	for (i = 0; i < sizeof(arSupportedTxPwrRegion) / sizeof(TX_PWR_REGION_INFO_ENTRY); i++) {
-		prRegionInfo = &arSupportedTxPwrRegion[i];
+	for (i = 0; i <REG_TX_POWER_GROUP_NUM; i++) {
+		prRegionInfo = &g_arSupportedTxPwrRegion[i];
 
 		for (j = 0; j < prRegionInfo->u4CountryNum; j++) {
 			if (prRegionInfo->pu2RegionGroup[j] == (*pu2CountryCode))
@@ -2019,3 +2025,49 @@ rlmConvertCountry2Region(
 	return u2RetRegionCode;
 } /* rlmConvertCountry2Region */
 
+struct board_id_country_power_table {
+	unsigned int dev_type_id;
+	P_COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION power_limit_table;
+	P_DOMAIN_INFO_ENTRY RegDomains;
+	P_DOMAIN_INFO_ENTRY RegDomains_passive;
+	P_TX_PWR_REGION_INFO_ENTRY TxPwrRegion;
+};
+
+struct board_id_country_power_table board_id_country_table_list[] = {
+	{ DEV_TYPE_ID_abc123, &default_rRlmPowerLimitConfiguration,&default_arSupportedRegDomains,
+	  &default_arSupportedRegDomains_Passive, &default_arSupportedTxPwrRegion},
+	{ DEV_TYPE_ID_TRONA, &default_rRlmPowerLimitConfiguration, &default_arSupportedRegDomains,
+	  &default_arSupportedRegDomains_Passive, &default_arSupportedTxPwrRegion},
+	{ DEV_TYPE_ID_abx123, &abx123_rRlmPowerLimitConfiguration, &abx123_arSupportedRegDomains,
+	  &abx123_arSupportedRegDomains_Passive, &abx123_arSupportedTxPwrRegion},
+};
+
+void rlmPowerTableSizeInit(void)
+{
+	if (g_board_type == DEV_TYPE_ID_abx123) {
+		REG_COUNTRY_POWER_LIMIT_TABLE_NUM =
+			sizeof(abx123_rRlmPowerLimitConfiguration) / sizeof(COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+		REG_DOMAIN_GROUP_NUM =
+			sizeof(abx123_arSupportedRegDomains) / sizeof(DOMAIN_INFO_ENTRY);
+		REG_DOMAIN_PASSIVE_GROUP_NUM =
+			sizeof(abx123_arSupportedRegDomains_Passive) / sizeof(DOMAIN_INFO_ENTRY);
+		REG_TX_POWER_GROUP_NUM =
+			sizeof(abx123_arSupportedTxPwrRegion) / sizeof(TX_PWR_REGION_INFO_ENTRY);
+	}
+}
+
+WLAN_STATUS rlmWlanCountryTableInit(void)
+{
+	UINT_8 i = 0;
+	for (i = 0; i < ARRAY_SIZE(board_id_country_table_list); i++) {
+		if (g_board_type == board_id_country_table_list[i].dev_type_id) {
+			g_rRlmPowerLimitConfiguration = board_id_country_table_list[i].power_limit_table;
+			g_arSupportedRegDomains = board_id_country_table_list[i].RegDomains;
+			g_arSupportedRegDomains_Passive = board_id_country_table_list[i].RegDomains_passive;
+			g_arSupportedTxPwrRegion = board_id_country_table_list[i].TxPwrRegion;
+			rlmPowerTableSizeInit();
+			return WLAN_STATUS_SUCCESS;
+		}
+	}
+	return WLAN_STATUS_FAILURE;
+}

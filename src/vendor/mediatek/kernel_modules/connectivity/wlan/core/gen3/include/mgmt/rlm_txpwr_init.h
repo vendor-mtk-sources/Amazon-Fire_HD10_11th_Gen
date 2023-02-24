@@ -1002,7 +1002,10 @@ COUNTRY_POWER_LIMIT_TABLE_DEFAULT g_rRlmPowerLimitDefault[] = {
 	 , 0}
 };
 
-COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION g_rRlmPowerLimitConfiguration[] = {
+P_COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION g_rRlmPowerLimitConfiguration;
+
+/*The default is for Troan and abc123*/
+COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION default_rRlmPowerLimitConfiguration[] = {
 #if CFG_PWR_LIMIT_COUNTRY
 	{{'J', 'P'}
 	 , 36, {33, 33, 30, 28, 28}
@@ -1891,6 +1894,9 @@ COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION g_rRlmPowerLimitConfiguration[] = {
 	 , 165, {63, 63, 63, 63, 63}
 	 }
 };
+
+UINT_16 REG_COUNTRY_POWER_LIMIT_TABLE_NUM =
+	sizeof(default_rRlmPowerLimitConfiguration) / sizeof(COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
 
 #if 0
 COUNTRY_CHANNEL_POWER_LIMIT g_rRlmCountryPowerLimitTable[] = {

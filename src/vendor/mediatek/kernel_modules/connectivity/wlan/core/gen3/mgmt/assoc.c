@@ -51,7 +51,7 @@
 #define MAX_DTIM_SKIP_COUNT					6
 
 APPEND_VAR_IE_ENTRY_T txAssocReqIETable[] = {
-#if CFG_SUPPORT_802_11K
+#if CFG_SUPPORT_802_11K || CFG_SUPPORT_PWR_CAPIE
 	{(ELEM_HDR_LEN + 2), NULL, rlmGeneratePowerCapIE}, /* Element ID: 33 */
 #endif
 	/* fos_change begin */
@@ -785,6 +785,11 @@ assocCheckRxReAssocRspFrameStatus(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRf
 	/* 4 <2> Parse the Header of (Re)Association Resp Frame. */
 	/* WLAN_GET_FIELD_16(&prAssocRspFrame->u2FrameCtrl, &u2RxFrameCtrl); */
 	u2RxFrameCtrl = prAssocRspFrame->u2FrameCtrl;	/* NOTE(Kevin): Optimized for ARM */
+#if CFG_SUPPORT_RSSI_STATISTICS
+	prAdapter->arRxRssiStatistics.ucAssocRcpi = (UINT_8) HAL_RX_STATUS_GET_RCPI(prSwRfb->prRxStatusGroup3);
+	prAdapter->arRxRssiStatistics.ucAssocRetransmission = (u2RxFrameCtrl & MASK_FC_RETRY);
+#endif
+
 	u2RxFrameCtrl &= MASK_FRAME_TYPE;
 	if (prStaRec->fgIsReAssoc) {
 		if (u2RxFrameCtrl != MAC_FRAME_REASSOC_RSP) {
@@ -1609,7 +1614,7 @@ WLAN_STATUS assocSendReAssocRespFrame(IN P_ADAPTER_T prAdapter, IN P_STA_RECORD_
 
 VOID assocGenerateMDIE(IN P_ADAPTER_T prAdapter, IN OUT P_MSDU_INFO_T prMsduInfo)
 {
-	struct FT_IES *prFtIEs = &prAdapter->prGlueInfo->rFtIeForTx;
+	struct FT_IES *prFtIEs = &prAdapter->prGlueInfo->rFtIeForAssocTx;
 	PUINT_8 pucBuffer = (PUINT_8)prMsduInfo->prPacket + prMsduInfo->u2FrameLength;
 	ENUM_PARAM_AUTH_MODE_T eAuthMode = prAdapter->rWifiVar.rConnSettings.eAuthMode;
 

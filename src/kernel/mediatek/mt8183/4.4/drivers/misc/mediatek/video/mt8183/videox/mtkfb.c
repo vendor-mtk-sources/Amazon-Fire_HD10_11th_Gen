@@ -365,6 +365,11 @@ static int mtkfb_blank(int blank_mode, struct fb_info *info)
 }
 #endif
 
+struct fb_info *mtkfb_get_fb_info(void)
+{
+	return mtkfb_fbi;
+}
+
 int mtkfb_set_backlight_level(unsigned int level)
 {
 	MTKFB_FUNC();
@@ -1136,7 +1141,7 @@ unsigned int mtkfb_fm_auto_test(void)
 	}
 
 	if (idle_state_backup) {
-		primary_display_idlemgr_kick(__func__, 0);
+		primary_display_idlemgr_kick(__func__, 1);
 		disp_helper_set_option(DISP_OPT_IDLE_MGR, 0);
 	}
 	fbVirAddr = (unsigned long)fbdev->fb_va_base;
@@ -2884,11 +2889,6 @@ static int mtkfb_probe(struct platform_device *pdev)
 	int init_state;
 	int r = 0;
 
-#ifdef CONFIG_MTK_IOMMU
-	struct ion_client *ion_display_client = NULL;
-	struct ion_handle *ion_display_handle = NULL;
-	size_t temp_va = 0;
-#endif
 	/* struct platform_device *pdev; */
 	long dts_gpio_state = 0;
 
@@ -2919,32 +2919,9 @@ static int mtkfb_probe(struct platform_device *pdev)
 
 	DISPMSG("mtkfb_probe: fb_pa = %pa\n", &fb_base);
 
-#ifdef CONFIG_MTK_IOMMU
-	temp_va = (size_t)ioremap_nocache(fb_base, (fb_base + vramsize - fb_base));
-	fbdev->fb_va_base = (void *)temp_va;
-	ion_display_client = disp_ion_create("disp_fb0");
-	if (ion_display_client == NULL) {
-		DDPPR_ERR("mtkfb_probe: fail to create ion\n");
-		r = -1;
-		goto cleanup;
-	}
-
-	ion_display_handle = disp_ion_alloc(ion_display_client,
-			ION_HEAP_MULTIMEDIA_MAP_MVA_MASK, temp_va, (fb_base + vramsize - fb_base));
-	if (r != 0) {
-		DDPPR_ERR("mtkfb_probe: fail to allocate buffer\n");
-		r = -1;
-		goto cleanup;
-	}
-
-	disp_ion_get_mva(ion_display_client,
-			 ion_display_handle,
-			 (unsigned int *) &fb_pa,
-			 DISP_M4U_PORT_DISP_OVL0);
-#else
 	disp_hal_allocate_framebuffer(fb_base, (fb_base + vramsize - 1),
 				      (unsigned long *)(&fbdev->fb_va_base), &fb_pa);
-#endif
+
 	fbdev->fb_pa_base = fb_base;
 
 	primary_display_set_frame_buffer_address((unsigned long)(fbdev->fb_va_base), fb_pa, fb_base);
@@ -3034,14 +3011,6 @@ static int mtkfb_probe(struct platform_device *pdev)
 	if (disp_helper_get_stage() != DISP_HELPER_STAGE_NORMAL)
 		primary_display_diagnose();
 
-
-	/*this function will get fb_heap base address to ion for management frame buffer */
-#ifdef MTK_FB_ION_SUPPORT /* FIXME: remove when ION ready */
-#ifndef FREE_FB_BUFFER
-	pr_info("%s ion_drv_create_FB_heap\n", __func__);
-	ion_drv_create_FB_heap(mtkfb_get_fb_base(), mtkfb_get_fb_size() - DAL_GetLayerSize());
-#endif
-#endif
 	fbdev->state = MTKFB_ACTIVE;
 
 	if (!strcmp(mtkfb_find_lcm_driver(), "oppo17321_tianma_td4310_1080p_dsi_vdo") ||

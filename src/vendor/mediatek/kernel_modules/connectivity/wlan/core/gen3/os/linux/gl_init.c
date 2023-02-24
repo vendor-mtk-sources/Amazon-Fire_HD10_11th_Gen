@@ -65,9 +65,9 @@
 #define IDME_OF_MAC_ADDR	"/idme/mac_addr"
 #define IDME_OF_WIFI_MFG        "/idme/wifi_mfg"
 #define IDME_OF_BOARD_ID	"/idme/board_id"
-#define BOARD_ID_MAVERICK_STR "003F"
+#define BOARD_ID_abc123_STR "003F"
 #define BOARD_ID_TRONA_STR "005E"
-#define BOARD_ID_PINNACLES_STR "0060"
+#define BOARD_ID_abx123_STR "0060"
 char idme_board_id[17];
 unsigned int g_board_type;
 #endif
@@ -749,7 +749,7 @@ static COUNTRY_POWER_TABLE asCountryPwrTbl[] = {
 			0x1, 0x1B, 0x1E, 0x1B), /* 5G band edge */
 };
 
-static COUNTRY_POWER_TABLE power_table_maverick[] = {
+static COUNTRY_POWER_TABLE power_table_abc123[] = {
 	COUNTRY_PWR_TBL("WW", /* country code */
 			0x21, /* CCK */
 			0x21, 0x21, 0x21, 0x21, 0x21, /* OFDM */
@@ -872,7 +872,7 @@ static COUNTRY_POWER_TABLE power_table_trona[] = {
 			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
 };
 
-static COUNTRY_POWER_TABLE power_table_pinnacles[] = {
+static COUNTRY_POWER_TABLE power_table_abx123[] = {
 	COUNTRY_PWR_TBL("WW",	/* country code */
 			0x23,	/* cck */
 			0x1B, 0x1B, 0x1B, 0x1B, 0x1B,	/* OFDM */
@@ -938,12 +938,64 @@ static COUNTRY_POWER_TABLE power_table_pinnacles[] = {
 			0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E,	/* AC */
 			0xFF, 0xFE, 0xFE,	/* VHT_OFFSET */
 			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
+	COUNTRY_PWR_TBL("AU",	/* country code */
+			0x24,	/* cck */
+			0x24, 0x24, 0x24, 0x24, 0x24,	/* OFDM */
+			0x26, 0x26, 0x26, 0x22, 0x22, 0x22,	/* HT20 */
+			0x26, 0x26, 0x26, 0x26, 0x26, 0x26,	/* HT40 */
+			0x22, 0x22, 0x22, 0x22, 0x22,	/* 5G_OFDM */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT20 */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT40 */
+			0x0, 0x1C, 0x1B, 0x00,	/* 2.4G band edge */
+			0x1,	/* 5G support */
+			0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,	/* AC */
+			0xFF, 0xFF, 0xFF,	/* VHT_OFFSET */
+			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
+	COUNTRY_PWR_TBL("IN",	/* country code */
+			0x24,	/* cck */
+			0x24, 0x24, 0x24, 0x24, 0x24,	/* OFDM */
+			0x26, 0x26, 0x26, 0x26, 0x26, 0x26,	/* HT20 */
+			0x26, 0x26, 0x26, 0x26, 0x26, 0x26,	/* HT40 */
+			0x22, 0x22, 0x22, 0x22, 0x22,	/* 5G_OFDM */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT20 */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT40 */
+			0x0, 0x1C, 0x1B, 0x00,	/* 2.4G band edge */
+			0x1,	/* 5G support */
+			0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,	/* AC */
+			0xFF, 0xFF, 0xFF,	/* VHT_OFFSET */
+			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
+	COUNTRY_PWR_TBL("BR",	/* country code */
+			0x24,	/* cck */
+			0x25, 0x25, 0x25, 0x25, 0x25,	/* OFDM */
+			0x24, 0x24, 0x24, 0x24, 0x24, 0x24,	/* HT20 */
+			0x24, 0x24, 0x24, 0x24, 0x24, 0x24,	/* HT40 */
+			0x22, 0x22, 0x22, 0x22, 0x22,	/* 5G_OFDM */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT20 */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT40 */
+			0x0, 0x1C, 0x1B, 0x00,	/* 2.4G band edge */
+			0x1,	/* 5G support */
+			0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,	/* AC */
+			0xFF, 0xFF, 0xFF,	/* VHT_OFFSET */
+			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
+	COUNTRY_PWR_TBL("CN",	/* country code */
+			0x23,	/* cck */
+			0x1B, 0x1B, 0x1B, 0x1B, 0x1B,	/* OFDM */
+			0x1B, 0x1B, 0x1B, 0x1B, 0x1B, 0x1B,	/* HT20 */
+			0x1B, 0x1B, 0x1B, 0x1B, 0x1B, 0x1B,	/* HT40 */
+			0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_OFDM */
+			0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	/* 5G_HT20 */
+			0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E,	/* 5G_HT40 */
+			0x0, 0x1C, 0x1B, 0x00,	/* 2.4G band edge */
+			0x1,	/* 5G support */
+			0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E,	/* AC */
+			0xFF, 0xFF, 0xFF,	/* VHT_OFFSET */
+			0x0, 0x1B, 0x1E, 0x1B),	/* 5G band edge */
 };
 
 struct board_id_power_table_map board_id_power_table_list[] = {
-	{BOARD_ID_MAVERICK_STR, power_table_maverick, ARRAY_SIZE(power_table_maverick)},
+	{BOARD_ID_abc123_STR, power_table_abc123, ARRAY_SIZE(power_table_abc123)},
 	{BOARD_ID_TRONA_STR, power_table_trona, ARRAY_SIZE(power_table_trona)},
-	{BOARD_ID_PINNACLES_STR, power_table_pinnacles, ARRAY_SIZE(power_table_pinnacles)},
+	{BOARD_ID_abx123_STR, power_table_abx123, ARRAY_SIZE(power_table_abx123)},
 };
 #endif
 
@@ -955,9 +1007,9 @@ struct board_id_ant_orientation_map {
 };
 
 struct board_id_ant_orientation_map board_id_ant_list[] = {
-	{ DEV_TYPE_ID_MAVERICK, ant_placement_maverick, ant_signal_maverick},
+	{ DEV_TYPE_ID_abc123, ant_placement_abc123, ant_signal_abc123},
 	{ DEV_TYPE_ID_TRONA, ant_placement_trona, ant_signal_trona},
-	{ DEV_TYPE_ID_PINNACLES, ant_placement_trona, ant_signal_trona},
+	{ DEV_TYPE_ID_abx123, ant_placement_trona, ant_signal_trona},
 };
 #endif
 
@@ -2983,20 +3035,22 @@ static void wlanBackupFwActiveTimeStatistics(void)
 	if (!prGlueInfo)
 		return;
 
-	/*need to read fw active time statistics before remove wlan*/
-	rCmdFwActiveTime.u4Action = FW_ACTIVE_TIME_STATISTICS_ACTION_GET;
-	rStatus = kalIoctl(prGlueInfo, wlanoidGetFwActiveTimeStatistics,
-		&rCmdFwActiveTime,
-		sizeof(struct CMD_FW_ACTIVE_TIME_STATISTICS),
-		TRUE, TRUE, TRUE, &u4BufLen);
-
-	/*update driver statistics*/
-	if (WLAN_STATUS_SUCCESS == rStatus) {
-		g_FwActiveTime.u4TimeDuringScreenOn += rCmdFwActiveTime.u4TimeDuringScreenOn;
-		g_FwActiveTime.u4TimeDuringScreenOff += rCmdFwActiveTime.u4TimeDuringScreenOff;
-		g_FwActiveTime.u4HwTimeDuringScreenOn += rCmdFwActiveTime.u4HwTimeDuringScreenOn;
-		g_FwActiveTime.u4HwTimeDuringScreenOff += rCmdFwActiveTime.u4HwTimeDuringScreenOff;
-	}
+	if (prGlueInfo->prAdapter->fgTestMode == FALSE) {
+		/*need to read fw active time statistics before remove wlan*/
+		rCmdFwActiveTime.u4Action = FW_ACTIVE_TIME_STATISTICS_ACTION_GET;
+		rStatus = kalIoctl(prGlueInfo, wlanoidGetFwActiveTimeStatistics,
+			&rCmdFwActiveTime,
+			sizeof(struct CMD_FW_ACTIVE_TIME_STATISTICS),
+			TRUE, TRUE, TRUE, &u4BufLen);
+		/*update driver statistics*/
+		if (WLAN_STATUS_SUCCESS == rStatus) {
+			g_FwActiveTime.u4TimeDuringScreenOn += rCmdFwActiveTime.u4TimeDuringScreenOn;
+			g_FwActiveTime.u4TimeDuringScreenOff += rCmdFwActiveTime.u4TimeDuringScreenOff;
+			g_FwActiveTime.u4HwTimeDuringScreenOn += rCmdFwActiveTime.u4HwTimeDuringScreenOn;
+			g_FwActiveTime.u4HwTimeDuringScreenOff += rCmdFwActiveTime.u4HwTimeDuringScreenOff;
+		}
+	} else
+		DBGLOG(INIT, INFO, "No need to backup driver statistics in testmode!\n");
 }
 #endif
 
@@ -3021,23 +3075,26 @@ static void wlanBackupFwBeacontimeCntStatistics(void)
 	prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prDev));
 	if (!prGlueInfo)
 		return;
-	kalMemZero(&rCmdFwBeacontimeoutCntStatistics, sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS));
 
-	rStatus = kalIoctl(prGlueInfo, wlanoidGetFwBeacontimeoutCntStatistics,
-		&rCmdFwBeacontimeoutCntStatistics,
-		sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS),
-		TRUE, TRUE, TRUE, &u4BufLen);
+	if (prGlueInfo->prAdapter->fgTestMode == FALSE) {
+		kalMemZero(&rCmdFwBeacontimeoutCntStatistics, sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS));
 
-	/*update driver beacontimeout cnt*/
-	if (WLAN_STATUS_SUCCESS == rStatus) {
-		totalBeacontimeoutCntScreenOffAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffAb;
-		totalBeacontimeoutCntScreenOffBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffBl;
-		totalBeacontimeoutCntScreenOnAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnAb;
-		totalBeacontimeoutCntScreenOnBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnBl;
-		totalBeacontimeoutRealCnt += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutRealCnt;
-	}
-	else
-		DBGLOG(REQ, WARN, "unable to get beacontimeout cnt ,status code = %d\n", rStatus);
+		rStatus = kalIoctl(prGlueInfo, wlanoidGetFwBeacontimeoutCntStatistics,
+			&rCmdFwBeacontimeoutCntStatistics,
+			sizeof(struct CMD_FW_BEACONTIMEOUT_CNT_STATISTICS),
+			TRUE, TRUE, TRUE, &u4BufLen);
+
+		/*update driver beacontimeout cnt*/
+		if (WLAN_STATUS_SUCCESS == rStatus) {
+			totalBeacontimeoutCntScreenOffAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffAb;
+			totalBeacontimeoutCntScreenOffBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOffBl;
+			totalBeacontimeoutCntScreenOnAb += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnAb;
+			totalBeacontimeoutCntScreenOnBl += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutCntScreenOnBl;
+			totalBeacontimeoutRealCnt += rCmdFwBeacontimeoutCntStatistics.u4BcnTimeoutRealCnt;
+		} else
+			DBGLOG(REQ, WARN, "unable to get beacontimeout cnt ,status code = %d\n", rStatus);
+	} else
+		DBGLOG(REQ, INFO, "No need to backup beacontimeout cnt in testmode!\n");
 }
 
 static void wlanCustomizeBeacontimeoutTh(P_ADAPTER_T prAdapter)
@@ -3236,7 +3293,7 @@ static INT_32 wlanProbe(PVOID pvData)
 			DBGLOG(INIT, WARN, "Get invalid LCM vendor id, set PanelType to 0\n");
 		}
 
-		prGlueInfo->ucPanelIdmePattern = strcmp(idme_board_id, BOARD_ID_MAVERICK_EVT) ? ANT_SWITCH_PATTERN_IMDE_ONLY : ANT_SWITCH_PANEL_IDME_PATTERN;
+		prGlueInfo->ucPanelIdmePattern = strcmp(idme_board_id, BOARD_ID_abc123_EVT) ? ANT_SWITCH_PATTERN_IMDE_ONLY : ANT_SWITCH_PANEL_IDME_PATTERN;
 		prGlueInfo->ucASGoodPanel = ANT_SWITCH_GOOD_PANEL;
 		prGlueInfo->fgIsEnableAntSwQuery = TRUE;
 		prGlueInfo->fgWas1stSwitch = TRUE;
@@ -3250,6 +3307,12 @@ static INT_32 wlanProbe(PVOID pvData)
 			break;
 		}
 #endif
+		i4Status = rlmWlanCountryTableInit();
+		if (i4Status != WLAN_STATUS_SUCCESS) {
+			DBGLOG(INIT, ERROR, "wlanProbe: init country table error\n");
+			eFailReason = FAIL_AST_INIT;
+			break;
+		}
 
 		/* kalMemCopy(&prGlueInfo->rRegInfo, prRegInfo, sizeof(REG_INFO_T)); */
 
@@ -3422,7 +3485,11 @@ static INT_32 wlanProbe(PVOID pvData)
 			break;
 		}
 #endif
-		kalMemZero(&prGlueInfo->rFtIeForTx, sizeof(prGlueInfo->rFtIeForTx));
+		kalMemZero(&prGlueInfo->rFtIeForAssocTx,
+			   sizeof(prGlueInfo->rFtIeForAssocTx));
+		kalMemZero(&prGlueInfo->rFtIeForAuthTx,
+			   sizeof(prGlueInfo->rFtIeForAuthTx));
+
 	} while (FALSE);
 
 	if (i4Status == WLAN_STATUS_SUCCESS) {

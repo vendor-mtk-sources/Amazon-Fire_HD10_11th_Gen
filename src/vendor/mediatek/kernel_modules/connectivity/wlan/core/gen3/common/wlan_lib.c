@@ -820,6 +820,7 @@ wlanAdapterStart(IN P_ADAPTER_T prAdapter, IN P_REG_INFO_T prRegInfo)
 				    prRegInfo->u4ArSysParam0,
 				    prRegInfo->u4ArSysParam1, prRegInfo->u4ArSysParam2, prRegInfo->u4ArSysParam3);
 #endif
+		prAdapter->r1xTxDoneStatus = TX_RESULT_UNINITIALIZED;
 	} while (FALSE);
 
 	if (u4Status == WLAN_STATUS_SUCCESS) {
@@ -3659,6 +3660,7 @@ nicTxSecFrameTxDone(IN P_ADAPTER_T prAdapter, IN P_MSDU_INFO_T prMsduInfo,
 		ucKeyCmdAction = SEC_DROP_KEY_COMMAND;
 	else
 		ucKeyCmdAction = SEC_TX_KEY_COMMAND;
+	prAdapter->r1xTxDoneStatus = rTxDoneStatus;
 	secSetKeyCmdAction(prAdapter->aprBssInfo[prMsduInfo->ucBssIndex],
 		prMsduInfo->ucEapolKeyType, ucKeyCmdAction);
 	kalSetEvent(prAdapter->prGlueInfo);
@@ -3689,6 +3691,12 @@ BOOLEAN wlanProcessSecurityFrame(IN P_ADAPTER_T prAdapter, IN P_NATIVE_PACKET pr
 
 	ASSERT(prAdapter);
 	ASSERT(prPacket);
+
+	if (prAdapter->fgIsTest1xTx == 1) {
+		prAdapter->r1xTxDoneStatus = TX_RESULT_1XTX_CLEAR;
+		DBGLOG(RSN, INFO, "test 1XTX frame skip!\n");
+		return FALSE;
+	}
 
 	prCmdInfo = cmdBufAllocateCmdInfo(prAdapter, 0);
 
@@ -7299,6 +7307,7 @@ int wlanSuspendRekeyOffload(P_GLUE_INFO_T prGlueInfo, IN UINT_8 ucRekeyDisable)
 VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
 {
 	int ret = -1;
+	int minerva_ret = -1;
 
 	if (fgIsPid) {
 		if (ucPidOverflow == 0)
@@ -7309,6 +7318,13 @@ VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
 		if (ret)
 			DBGLOG(AIS, ERROR,
 				"conn-PID-Overflow matric fail\n");
+		else
+			ucPidOverflow = 0;
+
+		minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "wifi-mac-layer-unreachable", "NoPID", 1, NULL);
+		if (minerva_ret)
+			DBGLOG(AIS, ERROR,
+				"conn-PID-Overflow minerva_ret fail\n");
 		else
 			ucPidOverflow = 0;
 	}
@@ -7323,8 +7339,61 @@ VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
 				"Absence is timeout matric to fwk fail\n");
 		else
 			ucAbSence = 0;
+
+		minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "wifi-mac-layer-unreachable", "NoPresence", 1, NULL);
+		if (minerva_ret)
+			DBGLOG(AIS, ERROR,
+				"conn-PID-Overflow minerva_ret fail\n");
+		else
+			ucAbSence = 0;
 	}
 
 }
 #endif
 #endif
+
+uint8_t wlanGetBssIdx(struct net_device *ndev)
+{
+	if (ndev) {
+		P_NETDEV_PRIVATE_GLUE_INFO prNetDevPrivate
+			= (P_NETDEV_PRIVATE_GLUE_INFO) netdev_priv(ndev);
+
+		DBGLOG(REQ, LOUD,
+			"ucBssIndex = %d, ndev(%p)\n",
+			prNetDevPrivate->ucBssIdx,
+			ndev);
+
+		return prNetDevPrivate->ucBssIdx;
+	}
+
+	DBGLOG(REQ, LOUD,
+		"ucBssIndex = 0xff, ndev(%p)\n",
+		ndev);
+
+	return 0xff;
+}
+#if CFG_SUPPORT_RSSI_STATISTICS
+void wlanGetTxRxCount(IN P_ADAPTER_T prAdapter, UINT_8 ucBssIndex)
+{
+	struct PARAM_RX_COUNT prRxCount;
+	UINT_32 rStatus;
+
+
+	prRxCount.ucBssIndex = ucBssIndex;
+	DBGLOG(REQ, LOUD, "wlanGetTxRxCount %d\n", prRxCount.ucBssIndex);
+	rStatus = wlanSendSetQueryCmd(prAdapter,
+			    CMD_ID_GET_RX_COUNT,
+			    FALSE,
+			    TRUE,
+			    FALSE,
+			    nicCmdEventRecordTxRxCount,
+			    nicOidCmdTimeoutCommon,
+			    sizeof(struct PARAM_RX_COUNT),
+			    (uint8_t *) &prRxCount,
+			    NULL, 0);
+
+	if (rStatus != WLAN_STATUS_SUCCESS && rStatus != WLAN_STATUS_PENDING)
+		DBGLOG(REQ, ERROR, "Failed with status %d\n", rStatus);
+}
+#endif
+

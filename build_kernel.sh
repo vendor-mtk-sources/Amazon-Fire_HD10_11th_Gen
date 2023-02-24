@@ -35,7 +35,7 @@ WORKSPACE_DIR="$(mktemp -d)"
 
 TOOLCHAIN_DIR="${WORKSPACE_DIR}/toolchain"
 PLATFORM_EXTRACT_DIR="${WORKSPACE_DIR}/src"
-WORKSPACE_OUT_DIR="${WORKSPACE_DIR}/out"
+WORKSPACE_OUT_DIR="${PLATFORM_EXTRACT_DIR}/out/target/product/trona/obj/KERNEL_OBJ"
 
 for d in "${TOOLCHAIN_DIR}" "${PLATFORM_EXTRACT_DIR}" "$WORKSPACE_OUT_DIR"
 do
@@ -45,7 +45,7 @@ done
 # Remove workspace directory upon completion.
 trap "rm -rf $WORKSPACE_DIR" EXIT
 
-PARALLEL_EXECUTION="-j8"
+PARALLEL_EXECUTION="-j24"
 
 function usage {
     echo "Usage: ${BASH_SOURCE[0]} path_to_platform_tar output_folder" 1>&2
@@ -105,7 +105,7 @@ function setup_output_dir {
 
 function download_toolchain {
     echo "Cloning toolchain ${TOOLCHAIN_REPO} to ${TOOLCHAIN_DIR}"
-    git clone "${TOOLCHAIN_REPO}" "${TOOLCHAIN_DIR}"
+    git clone --single-branch -b "${TOOLCHAIN_BRANCH}" "${TOOLCHAIN_REPO}" "${TOOLCHAIN_DIR}"
     if [[ $? -ne 0 ]]
     then
         echo "ERROR: Could not clone toolchain from ${TOOLCHAIN_REPO}."
@@ -127,9 +127,10 @@ function exec_build_kernel {
         MAKE_ARGS="-C ${KERNEL_SUBPATH}"
     fi
 
-    MAKE_ARGS="${MAKE_ARGS} O=${WORKSPACE_OUT_DIR} ARCH=${TARGET_ARCH} CROSS_COMPILE=${CCOMPILE}"
-    MAKE_ARGS="${MAKE_ARGS} CLANG_TRIPLE=aarch64-linux-gnu- CC=${CC}"
-    echo "Base make args: ${MAKE_ARGS}"
+    MAKE_ARGS="-C ${KERNEL_SUBPATH} O=${WORKSPACE_OUT_DIR} ARCH=${TARGET_ARCH}"
+    MAKE_ARGS1="-C ${KERNEL_SUBPATH} O=${WORKSPACE_OUT_DIR} ARCH=${TARGET_ARCH} CROSS_COMPILE=${CCOMPILE} CLANG_TRIPLE=aarch64-linux-gnu- CC=${CC}"
+    echo "MAKE_ARGS: ${MAKE_ARGS}"
+    echo "MAKE_ARGS1: ${MAKE_ARGS1}"
 
     # Move into the build base folder.
     pushd "${PLATFORM_EXTRACT_DIR}"
@@ -146,7 +147,7 @@ function exec_build_kernel {
 
     # Step 3: full make
     echo "Running full make"
-    make ${MAKE_ARGS}
+    make ${PARALLEL_EXECUTION} ${MAKE_ARGS1}
 
     if [[ $? != 0 ]]; then
         echo "ERROR: Failed to build kernel" >&2

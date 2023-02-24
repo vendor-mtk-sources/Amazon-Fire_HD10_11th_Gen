@@ -1386,10 +1386,11 @@ nla_put_failure:
 int mtk_cfg80211_vendor_packet_keep_alive_start(struct wiphy *wiphy, struct wireless_dev *wdev,
 						const void *data, int data_len)
 {
+#define MAX_PKT_LEN 256
 	WLAN_STATUS rStatus = WLAN_STATUS_SUCCESS;
 	UINT_32 u4BufLen = 0;
 	P_GLUE_INFO_T prGlueInfo = NULL;
-
+	unsigned short u2IpPktLen = 0;
 	INT_32 i4Status = -EINVAL;
 	P_PARAM_PACKET_KEEPALIVE_T prPkt = NULL;
 	struct nlattr *attr[MKEEP_ALIVE_ATTRIBUTE_PERIOD_MSEC + 1];
@@ -1427,7 +1428,9 @@ int mtk_cfg80211_vendor_packet_keep_alive_start(struct wiphy *wiphy, struct wire
 				? sizeof(prPkt->pIpPkt):nla_get_u16(attr[i]);
 				break;
 			case MKEEP_ALIVE_ATTRIBUTE_IP_PKT:
-				kalMemCopy(prPkt->pIpPkt, nla_data(attr[i]), prPkt->u2IpPktLen);
+				u2IpPktLen = prPkt->u2IpPktLen <= MAX_PKT_LEN
+					? prPkt->u2IpPktLen : MAX_PKT_LEN;
+				kalMemCopy(prPkt->pIpPkt, nla_data(attr[i]), u2IpPktLen);
 				break;
 			case MKEEP_ALIVE_ATTRIBUTE_SRC_MAC_ADDR:
 				kalMemCopy(prPkt->ucSrcMacAddr, nla_data(attr[i]), sizeof(mac_addr));

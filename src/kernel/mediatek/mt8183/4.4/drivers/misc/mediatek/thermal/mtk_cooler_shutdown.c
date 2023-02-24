@@ -81,7 +81,10 @@ static ssize_t _mtk_cl_sd_rst_write(struct file *filp, const char __user *buf, s
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &mtk_cl_sd_rst);
 	if (ret)
 		WARN_ON_ONCE(1);
@@ -132,7 +135,10 @@ static ssize_t _mtk_cl_sd_pid_write(struct file *filp, const char __user *buf, s
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &tm_input_pid);
 	if (ret)
 		WARN_ON_ONCE(1);
@@ -174,7 +180,10 @@ static ssize_t _mtk_cl_sd_debouncet_write(struct file *filp, const char __user *
 	/* write data to the buffer */
 	if (copy_from_user(desc, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(desc))
+		desc[len] = '\0';
+	else
+		desc[sizeof(desc) - 1] = '\0';
 	if (kstrtoint(desc, 10, &tmp_dbt) == 0) {
 		if (tmp_dbt >= 0 && tmp_dbt <= 5)
 			sd_debouncet = tmp_dbt;

@@ -1393,14 +1393,17 @@ static UINT_8 rlmRecIeInfoForClient(P_ADAPTER_T prAdapter, P_BSS_INFO_T prBssInf
 				qmSetStaRecTxAllowed(prAdapter, prStaRec, FALSE);
 				DBGLOG(RLM, INFO, "Before switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
 			}
-			if (prChannelSwitchIE->ucChannelSwitchCount <= 3) {
-				DBGLOG(RLM, INFO, "channel switch [%d]->[%d]\n",
-				       prBssInfo->ucPrimaryChannel,
-				       prChannelSwitchIE->ucNewChannelNum);
-				prCsaParam->ucNewChannel = prChannelSwitchIE->ucNewChannelNum;
+			if (prChannelSwitchIE->ucChannelSwitchCount) {
 				prCsaParam->fgReadyToSwitch = TRUE;
+				prCsaParam->ucNewChannel = prChannelSwitchIE->ucNewChannelNum;
+				cnmTimerStopTimer(prAdapter, &prBssInfo->rCsaTimer);
+				cnmTimerStartTimer(prAdapter, &prBssInfo->rCsaTimer,
+						prBssInfo->u2BeaconInterval *
+						prChannelSwitchIE->ucChannelSwitchCount);
+				DBGLOG(RLM, INFO, "Channel switch Countdown: %d msecs\n",
+						prBssInfo->u2BeaconInterval *
+						prChannelSwitchIE->ucChannelSwitchCount);
 			}
-
 			break;
 
 		case ELEM_ID_SCO:
@@ -1479,76 +1482,6 @@ static UINT_8 rlmRecIeInfoForClient(P_ADAPTER_T prAdapter, P_BSS_INFO_T prBssInf
 		}
 	}
 #endif
-
-#if CFG_SUPPORT_DFS
-	/* Check whether it is ready to switch, and whether Secondary Channel Offset IE &
-	 * Wide Bandwidth Channel Switch IE exist or not.
-	 * If both not exist, the operating bandwidth after switch is 20MHz.
-	 */
-	if (prCsaParam->fgReadyToSwitch) {
-		P_BSS_DESC_T prBssDesc;
-		PARAM_SSID_T rSsid;
-
-		if (prCsaParam->fgHasWideBandIE) {
-			prBssInfo->ucVhtChannelWidth = prCsaParam->ucNewVhtBw;
-			prBssInfo->ucVhtChannelFrequencyS1 = prCsaParam->ucNewVhtS1;
-			prBssInfo->ucVhtChannelFrequencyS2 = prCsaParam->ucNewVhtS2;
-		} else {
-			prBssInfo->ucVhtChannelWidth = VHT_OP_CHANNEL_WIDTH_20_40;
-			prBssInfo->ucVhtChannelFrequencyS1 = 0;
-			prBssInfo->ucVhtChannelFrequencyS2 = 0;
-		}
-
-		if (prCsaParam->fgHasSCOIE)
-			prBssInfo->eBssSCO = prCsaParam->eNewSCO;
-		else
-			prBssInfo->eBssSCO = CHNL_EXT_SCN;
-
-		prBssInfo->ucPrimaryChannel = prCsaParam->ucNewChannel;
-		COPY_SSID(rSsid.aucSsid, rSsid.u4SsidLen, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
-		prBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, prBssInfo->aucBSSID, TRUE, &rSsid);
-
-		if (prBssDesc) {
-			DBGLOG(RLM, INFO, "BSS " MACSTR " Desc found, channel update [%d]->[%d]\n",
-			       MAC2STR(prBssInfo->aucBSSID),
-			       prBssDesc->ucChannelNum,
-			       prCsaParam->ucNewChannel);
-			prBssDesc->ucChannelNum = prCsaParam->ucNewChannel;
-			prBssDesc->ucCenterFreqS1 = prBssInfo->ucVhtChannelFrequencyS1;
-			prBssDesc->ucCenterFreqS2 = prBssInfo->ucVhtChannelFrequencyS2;
-			prBssDesc->eChannelWidth = prBssInfo->ucVhtChannelWidth;
-			prBssDesc->eSco = prBssInfo->eBssSCO;
-
-			if (!rlmDomainIsValidRfSetting(prAdapter, prBssDesc->eBand, prBssDesc->ucChannelNum, prBssDesc->eSco,
-				prBssDesc->eChannelWidth, prBssDesc->ucCenterFreqS1,
-				prBssDesc->ucCenterFreqS2)) {
-				/* Error Handling for Non-predicted IE - Fixed to set 20MHz */
-				prBssDesc->eChannelWidth = CW_20_40MHZ;
-				prBssDesc->ucCenterFreqS1 = 0;
-				prBssDesc->ucCenterFreqS2 = 0;
-				prBssDesc->eSco = CHNL_EXT_SCN;
-			}
-		} else {
-			DBGLOG(RLM, INFO, "BSS " MACSTR " Desc is not found\n", MAC2STR(prBssInfo->aucBSSID));
-		}
-
-		if (prBssDesc) {
-			kalIndicateChannelSwitch(prAdapter->prGlueInfo,
-				prBssInfo->eBssSCO,
-				prBssDesc->ucChannelNum);
-		}
-
-		/* Reset the CSA params for next Channel Switch */
-		kalMemZero(prCsaParam, sizeof(*prCsaParam));
-
-		if (prChannelSwitchIE->ucChannelSwitchMode == 1) {
-			/* STA recovers to transmit frame */
-			qmSetStaRecTxAllowed(prAdapter, prStaRec, TRUE);
-			DBGLOG(RLM, INFO, "After switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
-		}
-	}
-#endif
-
 	rlmReviseMaxBw(prAdapter, prBssInfo->ucBssIndex, &prBssInfo->eBssSCO, &prBssInfo->ucVhtChannelWidth,
 		&prBssInfo->ucVhtChannelFrequencyS1, prBssInfo->ucPrimaryChannel);
 
@@ -2622,12 +2555,16 @@ VOID rlmProcessSpecMgtAction(P_ADAPTER_T prAdapter, P_SW_RFB_T prSwRfb)
 					qmSetStaRecTxAllowed(prAdapter, prStaRec, FALSE);
 					DBGLOG(RLM, INFO, "Before switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
 				}
-				if (prChannelSwitchIE->ucChannelSwitchCount <= 3) {
-					DBGLOG(RLM, INFO, "channel switch [%d]->[%d]\n",
-					       prBssInfo->ucPrimaryChannel,
-					       prChannelSwitchIE->ucNewChannelNum);
-					prCsaParam->ucNewChannel = prChannelSwitchIE->ucNewChannelNum;
+				if (prChannelSwitchIE->ucChannelSwitchCount) {
 					prCsaParam->fgReadyToSwitch = TRUE;
+					cnmTimerStopTimer(prAdapter, &prBssInfo->rCsaTimer);
+					cnmTimerStartTimer(prAdapter, &prBssInfo->rCsaTimer,
+							prBssInfo->u2BeaconInterval *
+							prChannelSwitchIE->ucChannelSwitchCount);
+
+					DBGLOG(RLM, INFO, "Channel switch Countdown: %d msecs\n",
+							prBssInfo->u2BeaconInterval *
+							prChannelSwitchIE->ucChannelSwitchCount);
 				}
 				break;
 
@@ -2665,72 +2602,6 @@ VOID rlmProcessSpecMgtAction(P_ADAPTER_T prAdapter, P_SW_RFB_T prSwRfb)
 				break;
 			}	/*end of switch IE_ID */
 		}		/*end of IE_FOR_EACH */
-
-		if (prCsaParam->fgReadyToSwitch) {
-			P_BSS_DESC_T prBssDesc;
-			PARAM_SSID_T rSsid;
-
-			if (prCsaParam->fgHasWideBandIE) {
-				prBssInfo->ucVhtChannelWidth = prCsaParam->ucNewVhtBw;
-				prBssInfo->ucVhtChannelFrequencyS1 = prCsaParam->ucNewVhtS1;
-				prBssInfo->ucVhtChannelFrequencyS2 = prCsaParam->ucNewVhtS2;
-			} else {
-				prBssInfo->ucVhtChannelWidth = VHT_OP_CHANNEL_WIDTH_20_40;
-				prBssInfo->ucVhtChannelFrequencyS1 = 0;
-				prBssInfo->ucVhtChannelFrequencyS2 = 0;
-			}
-
-			prBssInfo->ucPrimaryChannel = prCsaParam->ucNewChannel;
-			if (prCsaParam->fgHasSCOIE)
-				prBssInfo->eBssSCO = prCsaParam->eNewSCO;
-			else
-				prBssInfo->eBssSCO = CHNL_EXT_SCN;
-
-			if (!rlmDomainIsValidRfSetting(prAdapter, prBssInfo->eBand,
-				prBssInfo->ucPrimaryChannel, prBssInfo->eBssSCO,
-				prBssInfo->ucVhtChannelWidth, prBssInfo->ucVhtChannelFrequencyS1,
-				prBssInfo->ucVhtChannelFrequencyS2)) {
-				/*Error Handling for Non-predicted IE - Fixed to set 20MHz */
-				prBssInfo->ucVhtChannelWidth = CW_20_40MHZ;
-				prBssInfo->ucVhtChannelFrequencyS1 = 0;
-				prBssInfo->ucVhtChannelFrequencyS2 = 0;
-				prBssInfo->eBssSCO = CHNL_EXT_SCN;
-				prBssInfo->ucHtOpInfo1 &= ~(HT_OP_INFO1_SCO | HT_OP_INFO1_STA_CHNL_WIDTH);
-			}
-
-			COPY_SSID(rSsid.aucSsid, rSsid.u4SsidLen, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
-			prBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, prStaRec->aucMacAddr, TRUE, &rSsid);
-
-			if (prBssDesc) {
-				DBGLOG(RLM, INFO,
-				       "BSS " MACSTR " Desc found, channel update [%d]->[%d]\n",
-				       MAC2STR(prBssInfo->aucBSSID),
-				       prBssDesc->ucChannelNum,
-				       prCsaParam->ucNewChannel);
-				prBssDesc->ucChannelNum = prCsaParam->ucNewChannel;
-				prBssDesc->ucCenterFreqS1 = prBssInfo->ucVhtChannelFrequencyS1;
-				prBssDesc->ucCenterFreqS2 = prBssInfo->ucVhtChannelFrequencyS2;
-				prBssDesc->eChannelWidth = prBssInfo->ucVhtChannelWidth;
-				prBssDesc->eSco = prBssInfo->eBssSCO;
-			} else {
-				DBGLOG(RLM, INFO,
-				       "BSS " MACSTR " Desc is not found\n", MAC2STR(prBssInfo->aucBSSID));
-			}
-
-			if (prBssDesc) {
-				kalIndicateChannelSwitch(prAdapter->prGlueInfo,
-					prBssInfo->eBssSCO,
-					prBssDesc->ucChannelNum);
-			}
-			/* Reset the CSA params for next Channel Switch */
-			kalMemZero(prCsaParam, sizeof(*prCsaParam));
-
-			if (prChannelSwitchIE && prChannelSwitchIE->ucChannelSwitchMode == 1) {
-				/* STA recovers to transmit frame */
-				qmSetStaRecTxAllowed(prAdapter, prStaRec, TRUE);
-				DBGLOG(RLM, INFO, "After switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
-			}
-		}
 		nicUpdateBss(prAdapter, prBssInfo->ucBssIndex);
 	}
 
@@ -3629,4 +3500,93 @@ VOID rlmScheduleNextRm(P_ADAPTER_T prAdapter)
 	prMsg->eMsgId = MID_RLM_RM_SCHEDULE;
 	mboxSendMsg(prAdapter, MBOX_ID_0, prMsg, MSG_SEND_METHOD_BUF);
 }
+#if CFG_SUPPORT_DFS
+VOID rlmCsaTimeout(P_ADAPTER_T prAdapter, ULONG ulParamPtr)
+{
+
+	UINT_8 ucBssIndex = (UINT_8) ulParamPtr;
+	P_BSS_INFO_T prBssInfo;
+	P_STA_RECORD_T prStaRec;
+	struct CHANNEL_SWITCH_ANNOUNCE_PARAMS *prCsaParam;
+
+	ASSERT(prAdapter);
+	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
+	if (!prBssInfo) {
+		DBGLOG(RLM, INFO, "No prBssInfo in rlmCsaTimeout\n");
+		return;
+	}
+
+	prStaRec = cnmGetStaRecByIndex(prAdapter, ucBssIndex);
+	if (!prStaRec) {
+		DBGLOG(RLM, INFO, "No prStaRec in rlmCsaTimeout\n");
+		return;
+	}
+
+	prCsaParam = &(prAdapter->rWifiVar.rAisSpecificBssInfo.rCsaParam);
+	if (prCsaParam->fgReadyToSwitch) {
+		P_BSS_DESC_T prBssDesc;
+		PARAM_SSID_T rSsid;
+
+		if (prCsaParam->fgHasWideBandIE) {
+			prBssInfo->ucVhtChannelWidth = prCsaParam->ucNewVhtBw;
+			prBssInfo->ucVhtChannelFrequencyS1 = prCsaParam->ucNewVhtS1;
+			prBssInfo->ucVhtChannelFrequencyS2 = prCsaParam->ucNewVhtS2;
+		} else {
+			prBssInfo->ucVhtChannelWidth = VHT_OP_CHANNEL_WIDTH_20_40;
+			prBssInfo->ucVhtChannelFrequencyS1 = 0;
+			prBssInfo->ucVhtChannelFrequencyS2 = 0;
+		}
+		if (prCsaParam->fgHasSCOIE)
+			prBssInfo->eBssSCO = prCsaParam->eNewSCO;
+		else
+			prBssInfo->eBssSCO = CHNL_EXT_SCN;
+		prBssInfo->ucPrimaryChannel = prCsaParam->ucNewChannel;
+		COPY_SSID(rSsid.aucSsid, rSsid.u4SsidLen, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
+		prBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, prBssInfo->aucBSSID, TRUE, &rSsid);
+		if (prBssDesc) {
+			DBGLOG(RLM, INFO,
+				"BSS " MACSTR " channel[%d]->[%d], BW[%d]->[%d] S1[%d]->[%d], S2[%d]->[%d]\n",
+				MAC2STR(prBssInfo->aucBSSID),
+				prBssDesc->ucChannelNum,
+				prCsaParam->ucNewChannel,
+				prBssDesc->eChannelWidth,
+				prBssInfo->ucVhtChannelWidth,
+				prBssDesc->ucCenterFreqS1,
+				prBssInfo->ucVhtChannelFrequencyS1,
+				prBssDesc->ucCenterFreqS2,
+				prBssInfo->ucVhtChannelFrequencyS2);
+
+				prBssDesc->ucChannelNum = prCsaParam->ucNewChannel;
+				prBssDesc->eChannelWidth = prBssInfo->ucVhtChannelWidth;
+				prBssDesc->ucCenterFreqS1 = prBssInfo->ucVhtChannelFrequencyS1;
+				prBssDesc->ucCenterFreqS2 = prBssInfo->ucVhtChannelFrequencyS2;
+				prBssDesc->eSco = prBssInfo->eBssSCO;
+				if (!rlmDomainIsValidRfSetting(prAdapter, prBssDesc->eBand, prBssDesc->ucChannelNum, prBssDesc->eSco,
+					prBssDesc->eChannelWidth, prBssDesc->ucCenterFreqS1,
+					prBssDesc->ucCenterFreqS2)) {
+					/* Error Handling for Non-predicted IE - Fixed to set 20MHz */
+					prBssDesc->eChannelWidth = CW_20_40MHZ;
+					prBssDesc->ucCenterFreqS1 = 0;
+					prBssDesc->ucCenterFreqS2 = 0;
+					prBssDesc->eSco = CHNL_EXT_SCN;
+				}
+		} else {
+			DBGLOG(RLM, INFO,
+				"BSS " MACSTR " Desc is not found\n", MAC2STR(prBssInfo->aucBSSID));
+		}
+		if (prBssDesc) {
+			kalIndicateChannelSwitch(prAdapter->prGlueInfo,
+				prBssInfo->eBssSCO,
+				prBssDesc->ucChannelNum);
+		}
+
+		/* Reset the CSA params for next Channel Switch */
+		kalMemZero(prCsaParam, sizeof(*prCsaParam));
+		prCsaParam->fgReadyToSwitch = FALSE;
+		qmSetStaRecTxAllowed(prAdapter, prStaRec, TRUE);
+		DBGLOG(RLM, INFO, "After switching, TxAllowed=%d\n", prStaRec->fgIsTxAllowed);
+	}
+	nicUpdateBss(prAdapter, prBssInfo->ucBssIndex);
+}
+#endif
 

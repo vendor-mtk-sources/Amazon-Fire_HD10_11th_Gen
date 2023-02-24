@@ -2413,6 +2413,13 @@ INT_32 MT_ATEWriteEfuse(struct net_device *prNetDev, UINT_16 u2Offset, UINT_16 u
 	WLAN_STATUS i4Status = WLAN_STATUS_SUCCESS;
 	UINT_8  u4Index = 0, u4Loop = 0;
 
+	u4Index = u2Offset % EFUSE_BLOCK_SIZE;
+
+	if (u4Index >= EFUSE_BLOCK_SIZE - 1) {
+		DBGLOG(INIT, INFO, "u4Index [%d] overrun\n", u4Index);
+		return -EFAULT;
+	}
+
 	prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prNetDev));
 	kalMemSet(&rAccessEfuseInfoRead, 0, sizeof(PARAM_CUSTOM_ACCESS_EFUSE_T));
 	kalMemSet(&rAccessEfuseInfoWrite, 0, sizeof(PARAM_CUSTOM_ACCESS_EFUSE_T));
@@ -2431,8 +2438,6 @@ INT_32 MT_ATEWriteEfuse(struct net_device *prNetDev, UINT_16 u2Offset, UINT_16 u
 
 	/* Write */
 	kalMemSet(&rAccessEfuseInfoWrite, 0, sizeof(PARAM_CUSTOM_ACCESS_EFUSE_T));
-	u4Index = u2Offset % EFUSE_BLOCK_SIZE;
-
 
 	prGlueInfo->prAdapter->aucEepromVaule[u4Index] = u2Content;
 	prGlueInfo->prAdapter->aucEepromVaule[u4Index+1] = u2Content >> 8 & 0xff;

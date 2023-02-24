@@ -1100,6 +1100,8 @@
 	enable_sw_safety_timer;
 	enable_top_off_mode_debounce;
 
+	soc_exit_eoc = <96>;	/* below 96% to exit EOC mode */
+
 	max_charging_time = <72000>;	/* 72000 seconds (20hours) */
 
 	/* common */

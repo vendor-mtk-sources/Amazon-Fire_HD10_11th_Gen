@@ -59,6 +59,8 @@ static DEFINE_SPINLOCK(g_CAM_CALLock);/*for SMP*/
 
 #define CAM_CAL_DEV_MAJOR_NUMBER 226
 
+#define CAM_CAL_MAX_BUF_SIZE 65536/*For Safety, Can Be Adjusted*/
+
 /* CAM_CAL READ/WRITE ID */
 #define CATC24C16_DEVICE_ID							0xA0
 /*#define I2C_UNIT_SIZE                                  1 //in byte*/
@@ -367,9 +369,20 @@ static long CAM_CAL_Ioctl(
 				return -EFAULT;
 			}
 		}
+	} else {
+		CAM_CALDB("[S24CAM_CAL] no data transfer\n");
+		return -EFAULT;
 	}
 
 	ptempbuf = (struct stCAM_CAL_INFO_STRUCT *)pBuff;
+
+	if ((ptempbuf->u4Length <= 0) ||
+		(ptempbuf->u4Length > CAM_CAL_MAX_BUF_SIZE)) {
+		kfree(pBuff);
+		CAM_CALDB("[S24CAM_CAL] buffer Length Error!\n");
+		return -EFAULT;
+	}
+
 	pu1Params = kmalloc(ptempbuf->u4Length, GFP_KERNEL);
 	if (pu1Params == NULL) {
 		kfree(pBuff);

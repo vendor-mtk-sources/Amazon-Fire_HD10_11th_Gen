@@ -351,6 +351,12 @@ config SUPPORT_DFS_CHANNEL
 	help
 	  Support DFS channel
 
+config SUPPORT_VO_ENTERPRISE
+        bool "SUPPORT_VO_ENTERPRISE"
+        default n
+        help
+          Support vo enterprise
+
 config MTK_WLAN_PWR_LIMIT_COUNTRY
 	bool "MTK_WLAN_PWR_LIMIT_COUNTRY"
 	default n

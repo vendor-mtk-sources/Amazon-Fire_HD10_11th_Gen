@@ -1752,7 +1752,10 @@ static INT_32 HQA_RfRegBulkRead(struct net_device *prNetDev,
 	else if (u4WfSel == 1)
 		u4Offset = u4Offset | 0x99910000;
 
-
+	if ((2 + (u4Length * 4)) > sizeof(HqaCmdFrame->Data)) {
+		i4Status = SERV_STATUS_AGENT_INVALID_LEN;
+		return i4Status;
+	}
 	for (u4Index = 0; u4Index < u4Length; u4Index++) {
 		rMcrInfo.u4McrOffset = u4Offset + u4Index * 4;
 		rMcrInfo.u4McrData = 0;
@@ -7508,6 +7511,12 @@ int priv_qa_agent(IN struct net_device *prNetDev,
 	INT_32 i4Status = 0;
 	HQA_CMD_FRAME *HqaCmdFrame;
 	UINT_32 u4ATEMagicNum, u4ATEId, u4ATEData;
+
+	if (!prIwReqData || prIwReqData->data.length == 0
+		|| prIwReqData->data.length > sizeof(struct _HQA_CMD_FRAME)) {
+		i4Status = -EINVAL;
+		goto ERROR0;
+	}
 
 	HqaCmdFrame = kmalloc(sizeof(*HqaCmdFrame), GFP_KERNEL);
 

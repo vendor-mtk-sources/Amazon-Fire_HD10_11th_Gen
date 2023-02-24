@@ -41,6 +41,9 @@ static void *seq_buf_alloc(unsigned long size)
 	if (!buf && size > PAGE_SIZE)
 		buf = vmalloc(size);
 #endif
+	if (unlikely(size > (INT_MAX & PAGE_MASK)))
+		return NULL;
+
 	if (size > PAGE_SIZE)
 		buf = vmalloc(size);
 	else

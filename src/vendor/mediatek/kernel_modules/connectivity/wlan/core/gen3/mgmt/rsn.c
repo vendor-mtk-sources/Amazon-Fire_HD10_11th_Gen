@@ -1251,6 +1251,7 @@ VOID rsnGenerateRSNIE(IN P_ADAPTER_T prAdapter, IN P_MSDU_INFO_T prMsduInfo)
 	PUINT_8 pucBuffer;
 	UINT_8 ucBssIndex;
 	P_STA_RECORD_T prStaRec;
+	struct FT_IES *prFtIEs = NULL;
 
 	DEBUGFUNC("rsnGenerateRSNIE");
 
@@ -1262,10 +1263,16 @@ VOID rsnGenerateRSNIE(IN P_ADAPTER_T prAdapter, IN P_MSDU_INFO_T prMsduInfo)
 
 	/* Todo:: network id */
 	ucBssIndex = prMsduInfo->ucBssIndex;
+
+	if (prAdapter->prGlueInfo->fgIsFtAuth)
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAuthTx;
+	else
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAssocTx;
+
 	/* for Fast Bss Transition,  we reuse the RSN Element composed in userspace */
 	if ((prAdapter->rWifiVar.rConnSettings.eAuthMode == AUTH_MODE_WPA2_FT ||
 		prAdapter->rWifiVar.rConnSettings.eAuthMode == AUTH_MODE_WPA2_FT_PSK) &&
-		prAdapter->prGlueInfo->rFtIeForTx.prRsnIE) {
+		prFtIEs->prRsnIE) {
 		authAddRSNIE(prAdapter, prMsduInfo);
 		return;
 	}
@@ -2514,7 +2521,12 @@ VOID rsnGenerateWSCIEForAssocRsp(P_ADAPTER_T prAdapter, P_MSDU_INFO_T prMsduInfo
 UINT_32 rsnCalculateFTIELen(P_ADAPTER_T prAdapter, UINT_8 ucBssIdx, P_STA_RECORD_T prStaRec)
 {
 	ENUM_PARAM_AUTH_MODE_T eAuthMode = prAdapter->rWifiVar.rConnSettings.eAuthMode;
-	struct FT_IES *prFtIEs = &prAdapter->prGlueInfo->rFtIeForTx;
+	struct FT_IES *prFtIEs = NULL;
+
+	if (prAdapter->prGlueInfo->fgIsFtAuth)
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAuthTx;
+	else
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAssocTx;
 
 	if (!IS_BSS_INDEX_VALID(ucBssIdx) || !IS_BSS_AIS(GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIdx)) ||
 		!prFtIEs->prFTIE || (eAuthMode != AUTH_MODE_WPA2_FT && eAuthMode != AUTH_MODE_WPA2_FT_PSK))
@@ -2525,10 +2537,16 @@ UINT_32 rsnCalculateFTIELen(P_ADAPTER_T prAdapter, UINT_8 ucBssIdx, P_STA_RECORD
 VOID rsnGenerateFTIE(IN P_ADAPTER_T prAdapter, IN OUT P_MSDU_INFO_T prMsduInfo)
 {
 	ENUM_PARAM_AUTH_MODE_T eAuthMode = prAdapter->rWifiVar.rConnSettings.eAuthMode;
-	struct FT_IES *prFtIEs = &prAdapter->prGlueInfo->rFtIeForTx;
+	struct FT_IES *prFtIEs = NULL;
+
 	PUINT_8 pucBuffer = (PUINT_8)prMsduInfo->prPacket + prMsduInfo->u2FrameLength;
 	UINT_32 ucFtIeSize = 0;
 	UINT_8 ucBssIdx = prMsduInfo->ucBssIndex;
+
+	if (prAdapter->prGlueInfo->fgIsFtAuth)
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAuthTx;
+	else
+		prFtIEs = &prAdapter->prGlueInfo->rFtIeForAssocTx;
 
 	if (!IS_BSS_INDEX_VALID(ucBssIdx) || !IS_BSS_AIS(GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIdx)) ||
 		!prFtIEs->prFTIE || (eAuthMode != AUTH_MODE_WPA2_FT && eAuthMode != AUTH_MODE_WPA2_FT_PSK))

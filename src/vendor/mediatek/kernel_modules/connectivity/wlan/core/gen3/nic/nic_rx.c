@@ -528,15 +528,17 @@ VOID nicRxFillChksumStatus(IN P_ADAPTER_T prAdapter, IN OUT P_SW_RFB_T prSwRfb, 
 void nicRxClearFrag(IN P_ADAPTER_T prAdapter,
 	IN P_STA_RECORD_T prStaRec )
 {
-	int j;
+	int i, j;
 	P_FRAG_INFO_T prFragInfo;
 
-	for (j = 0; j < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; j++) {
-		prFragInfo = &prStaRec->rFragInfo[j];
+	for (i = 0; i < TID_NUM; i++) {
+		for (j = 0; j < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; j++) {
+			prFragInfo = &prStaRec->rFragInfo[i][j];
 
-		if (prFragInfo->pr1stFrag) {
-			nicRxReturnRFB(prAdapter, prFragInfo->pr1stFrag);
-			prFragInfo->pr1stFrag = (P_SW_RFB_T)NULL;
+			if (prFragInfo->pr1stFrag) {
+				nicRxReturnRFB(prAdapter, prFragInfo->pr1stFrag);
+				prFragInfo->pr1stFrag = (P_SW_RFB_T)NULL;
+			}
 		}
 	}
 
@@ -569,8 +571,12 @@ P_SW_RFB_T nicRxDefragMPDU(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSWRfb, OUT 
 	BOOLEAN fgLast = FALSE;
 	OS_SYSTIME rCurrentTime;
 	P_WLAN_MAC_HEADER_T prWlanHeader = NULL;
+	P_WLAN_MAC_HEADER_QOS_T prWlanHeaderQos = NULL;
+	P_WLAN_MAC_HEADER_A4_QOS_T prWlanHeaderA4Qos = NULL;
 	P_HW_MAC_RX_DESC_T prRxStatus = NULL;
 	P_HW_MAC_RX_STS_GROUP_4_T prRxStatusGroup4 = NULL;
+	P_STA_RECORD_T prStaRec;
+	uint8_t ucTid = 0;
 #if CFG_SUPPORT_FRAG_ATTACK_DETECTION
 	uint8_t ucSecMode = CIPHER_SUITE_NONE;
 	uint64_t u8PN;
@@ -580,22 +586,39 @@ P_SW_RFB_T nicRxDefragMPDU(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSWRfb, OUT 
 
 	ASSERT(prSWRfb);
 
+	prStaRec = prSWRfb->prStaRec;
+
 	prRxStatus = prSWRfb->prRxStatus;
 	ASSERT(prRxStatus);
 
 	if (HAL_RX_STATUS_IS_HEADER_TRAN(prRxStatus) == FALSE) {
 		prWlanHeader = (P_WLAN_MAC_HEADER_T) prSWRfb->pvHeader;
+		prWlanHeaderQos = (P_WLAN_MAC_HEADER_QOS_T) prSWRfb->pvHeader;
+		prWlanHeaderA4Qos = (P_WLAN_MAC_HEADER_A4_QOS_T) prSWRfb->pvHeader;
 		prSWRfb->u2SequenceControl = prWlanHeader->u2SeqCtrl;
 		u2FrameCtrl = prWlanHeader->u2FrameCtrl;
+		if (RXM_IS_QOS_DATA_FRAME(u2FrameCtrl)) {
+			if (RXM_IS_FROM_DS_TO_DS(u2FrameCtrl)) {
+				ucTid = (prWlanHeaderA4Qos->u2QosCtrl & MASK_QC_TID);
+			} else {
+				ucTid = (prWlanHeaderQos->u2QosCtrl & MASK_QC_TID);
+			}
+		} else
+			ucTid = TID_NUM;
 	} else {
 		prRxStatusGroup4 = prSWRfb->prRxStatusGroup4;
 		prSWRfb->u2SequenceControl = HAL_RX_STATUS_GET_SEQFrag_NUM(prRxStatusGroup4);
 		u2FrameCtrl = HAL_RX_STATUS_GET_FRAME_CTL_FIELD(prRxStatusGroup4);
+		if (RXM_IS_QOS_DATA_FRAME(u2FrameCtrl))
+			ucTid = prSWRfb->ucTid;
+		else
+			ucTid = TID_NUM;
 	}
 	u2SeqCtrl = prSWRfb->u2SequenceControl;
 	u2SeqNo = u2SeqCtrl >> MASK_SC_SEQ_NUM_OFFSET;
 	ucFragNo = (uint8_t) (u2SeqCtrl & MASK_SC_FRAG_NUM);
 	prSWRfb->u2FrameCtrl = u2FrameCtrl;
+	prSWRfb->ucTid = ucTid;
 
 	if (!(u2FrameCtrl & MASK_FC_MORE_FRAG)) {
 		/* The last fragment frame */
@@ -641,7 +664,7 @@ P_SW_RFB_T nicRxDefragMPDU(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSWRfb, OUT 
 
 
 	for (j = 0; j < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; j++) {
-		prFragInfo = &prSWRfb->prStaRec->rFragInfo[j];
+		prFragInfo = &prSWRfb->prStaRec->rFragInfo[prSWRfb->ucTid][j];
 		if (prFragInfo->pr1stFrag) {
 			/* I. If the receive timer for the MSDU or MMPDU that is stored in the
 			 * fragments queue exceeds dot11MaxReceiveLifetime, we discard the
@@ -662,7 +685,7 @@ P_SW_RFB_T nicRxDefragMPDU(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSWRfb, OUT 
 
 	for (i = 0; i < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; i++) {
 
-		prFragInfo = &prSWRfb->prStaRec->rFragInfo[i];
+		prFragInfo = &prSWRfb->prStaRec->rFragInfo[prSWRfb->ucTid][i];
 
 		if (fgFirst) {	/* looking for timed-out frag buffer */
 
@@ -1692,6 +1715,11 @@ VOID nicRxProcessDataPacket(IN P_ADAPTER_T prAdapter, IN OUT P_SW_RFB_T prSwRfb)
 					break;
 				}
 				uEapolKeyType = secGetEapolKeyType((PUINT_8)prRetSwRfb->pvHeader);
+#if CFG_SUPPORT_RSSI_STATISTICS
+				if (uEapolKeyType == EAPOL_KEY_1_OF_4) {
+					secHandleRxEapolPacket(prAdapter, prRetSwRfb);
+				}
+#endif
 				if (uEapolKeyType != EAPOL_KEY_3_OF_4)
 					break;
 				/* STA has install key,and AP encrypted 3/4 Eapol frame
@@ -2369,6 +2397,21 @@ VOID nicRxProcessEventPacket(IN P_ADAPTER_T prAdapter, IN OUT P_SW_RFB_T prSwRfb
 		}
 
 		break;
+#if CFG_SUPPORT_RSSI_STATISTICS
+		case EVENT_ID_GET_RX_COUINT:
+		/* command response handling */
+		prCmdInfo = nicGetPendingCmdInfo(prAdapter, prEvent->ucSeqNum);
+
+		if (prCmdInfo != NULL) {
+			if (prCmdInfo->pfCmdDoneHandler)
+				prCmdInfo->pfCmdDoneHandler(prAdapter, prCmdInfo, prEvent->aucBuffer);
+			else if (prCmdInfo->fgIsOid)
+				kalOidComplete(prAdapter->prGlueInfo, prCmdInfo->fgSetQuery, 0, WLAN_STATUS_SUCCESS);
+			/* return prCmdInfo */
+			cmdBufFreeCmdInfo(prAdapter, prCmdInfo);
+		}
+		break;
+#endif
 
 	case EVENT_ID_CH_PRIVILEGE:
 		cnmChMngrHandleChEvent(prAdapter, prEvent);

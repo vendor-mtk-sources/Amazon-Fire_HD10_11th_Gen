@@ -283,13 +283,22 @@ int lbat_user_register(struct lbat_user *user, const char *name,
 	void (*callback)(unsigned int))
 {
 	int ret = 0;
+	unsigned int len = 0;
 
 	mutex_lock(&lbat_mutex);
 	if (IS_ERR(user)) {
 		ret = PTR_ERR(user);
 		goto out;
 	}
-	strncpy(user->name, name, strlen(name));
+
+	if (user->name == NULL) {
+		ret = -10;
+		goto out;
+	}
+	len = sizeof(user->name);
+	strncpy(user->name, name, (len - 1));
+	user->name[len - 1] = '\0';
+
 	if (hv_thd_volt >= 5400 || lv1_thd_volt <= 2650) {
 		ret = -11;
 		goto out;

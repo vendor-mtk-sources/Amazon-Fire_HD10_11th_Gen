@@ -859,6 +859,13 @@ P_BSS_INFO_T cnmGetBssInfoAndInit(P_ADAPTER_T prAdapter, ENUM_NETWORK_TYPE_T eNe
 #endif
 	if (prBssInfo)
 		prBssInfo->ucKeyCmdAction = SEC_TX_KEY_COMMAND;
+#if CFG_SUPPORT_DFS
+	if (prBssInfo) {
+		cnmTimerInitTimer(prAdapter,
+			&prBssInfo->rCsaTimer,
+			(PFN_MGMT_TIMEOUT_FUNC)rlmCsaTimeout, (ULONG) ucBssIndex);
+	}
+#endif
 	return prBssInfo;
 }
 
@@ -878,6 +885,9 @@ VOID cnmFreeBssInfo(P_ADAPTER_T prAdapter, P_BSS_INFO_T prBssInfo)
 	ASSERT(prBssInfo);
 
 	prBssInfo->fgIsInUse = FALSE;
+#if CFG_SUPPORT_DFS
+	cnmTimerStopTimer(prAdapter, &prBssInfo->rCsaTimer);
+#endif
 }
 
 VOID cnmRunEventReqChnlUtilTimeout(IN P_ADAPTER_T prAdapter, ULONG ulParamPtr)

@@ -821,6 +821,8 @@ int32_t cmdq_task_set_engine(struct cmdqRecStruct *handle, uint64_t engineFlag)
 
 int32_t cmdq_task_reset(struct cmdqRecStruct *handle)
 {
+	int i = 0;
+
 	if (handle == NULL)
 		return -EFAULT;
 
@@ -844,6 +846,9 @@ int32_t cmdq_task_reset(struct cmdqRecStruct *handle)
 	handle->secData.enginesDisablePortSecurity = 0LL;
 	handle->secData.enginesDisableDAPC = 0LL;
 	handle->secData.secMode = 0;
+
+	for (i = 0; i < ARRAY_SIZE(handle->slot_ids); i++)
+		handle->slot_ids[i] = -1;
 
 	if (handle->secData.addrMetadatas) {
 		kfree(CMDQ_U32_PTR(handle->secData.addrMetadatas));

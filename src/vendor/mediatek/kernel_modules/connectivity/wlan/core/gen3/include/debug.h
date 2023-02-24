@@ -42,6 +42,12 @@
 ********************************************************************************
 */
 #include "gl_typedef.h"
+#ifdef CONFIG_AMZN_METRICS_LOG
+#include <linux/amzn_metricslog.h>
+#endif
+#ifdef CONFIG_AMAZON_METRICS_LOG
+#include <linux/metricslog.h>
+#endif
 
 extern UINT_8 aucDebugModule[];
 #ifdef CONFIG_LOG_TOO_MUCH_WARNING
@@ -425,6 +431,11 @@ VOID wlanPktStatusDebugTraceInfoIP(UINT_8 status, UINT_8 eventType, UINT_8 ucIpP
 	, PUINT_8 pucPkt);
 VOID wlanPktStatusDebugTraceInfo(UINT_8 status, UINT_8 eventType
 	, UINT_16 u2EtherType, UINT_8 ucIpProto, UINT_16 u2IpId, UINT_16 u2ArpOpCode, PUINT_8 pucPkt);
+#endif
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+extern int minerva_log_counter_to_vitals(android_LogPriority priority,
+		const char *source, const char *key,
+		long counter_value, const char *metadata);
 #endif
 /*******************************************************************************
 *                              F U N C T I O N S

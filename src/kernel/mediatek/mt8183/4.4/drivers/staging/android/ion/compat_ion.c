@@ -165,9 +165,9 @@ static int compat_get_ion_allocation_data(
 			struct compat_ion_allocation_data __user *data32,
 			struct ion_allocation_data __user *data)
 {
-	compat_size_t s;
-	compat_uint_t u;
-	compat_int_t i;
+	compat_size_t s = 0;
+	compat_uint_t u = 0;
+	compat_int_t i = 0;
 	int err;
 
 	err = get_user(s, &data32->len);
@@ -188,7 +188,7 @@ static int compat_get_ion_handle_data(
 			struct compat_ion_handle_data __user *data32,
 			struct ion_handle_data __user *data)
 {
-	compat_int_t i;
+	compat_int_t i = 0;
 	int err;
 
 	err = get_user(i, &data32->handle);
@@ -201,9 +201,9 @@ static int compat_put_ion_allocation_data(
 			struct compat_ion_allocation_data __user *data32,
 			struct ion_allocation_data __user *data)
 {
-	compat_size_t s;
-	compat_uint_t u;
-	compat_int_t i;
+	compat_size_t s = 0;
+	compat_uint_t u = 0;
+	compat_int_t i = 0;
 	int err;
 
 	err = get_user(s, &data->len);
@@ -224,12 +224,12 @@ static int compat_get_ion_mm_config_buffer_param(
 			struct compat_ion_mm_config_buffer_param __user *data32,
 			struct ion_mm_config_buffer_param __user *data)
 {
-	compat_ulong_t handle;
-	compat_uint_t module_id;
-	compat_uint_t security;
-	compat_uint_t coherent;
-	compat_uint_t iova_start;
-	compat_uint_t iova_end;
+	compat_ulong_t handle = 0;
+	compat_uint_t module_id = 0;
+	compat_uint_t security = 0;
+	compat_uint_t coherent = 0;
+	compat_uint_t iova_start = 0;
+	compat_uint_t iova_end = 0;
 
 	int err;
 
@@ -253,19 +253,19 @@ static int compat_get_ion_mm_buf_debug_info_set(
 			struct compat_ion_mm_buf_debug_info __user *data32,
 			struct ion_mm_buf_debug_info __user *data)
 {
-	compat_ulong_t handle;
-	char dbg_name;
-	compat_uint_t value1;
-	compat_uint_t value2;
-	compat_uint_t value3;
-	compat_uint_t value4;
+	compat_ulong_t handle = 0;
+	char dbg_name = 0;
+	compat_uint_t value1 = 0;
+	compat_uint_t value2 = 0;
+	compat_uint_t value3 = 0;
+	compat_uint_t value4 = 0;
 
 	int i, err;
 
 	err = get_user(handle, &data32->handle);
 	err |= put_user(handle, &data->handle);
 	for (i = 0; i < ION_MM_DBG_NAME_LEN; i++) {
-		err = get_user(dbg_name, &data32->dbg_name[i]);
+		err |= get_user(dbg_name, &data32->dbg_name[i]);
 		err |= put_user(dbg_name, &data->dbg_name[i]);
 	}
 	err |= get_user(value1, &data32->value1);
@@ -284,7 +284,7 @@ static int compat_get_ion_mm_buf_debug_info(
 			struct compat_ion_mm_buf_debug_info __user *data32,
 			struct ion_mm_buf_debug_info __user *data)
 {
-	compat_ulong_t handle;
+	compat_ulong_t handle = 0;
 
 	int err;
 
@@ -298,9 +298,9 @@ static int compat_get_ion_mm_cache_pool_info(
 			struct compat_ion_mm_cache_pool_info __user *data32,
 			struct ion_mm_cache_pool_info __user *data)
 {
-	compat_size_t s;
-	compat_uint_t u;
-	compat_int_t i;
+	compat_size_t s = 0;
+	compat_uint_t u = 0;
+	compat_int_t i = 0;
 	int err;
 
 	err = get_user(s, &data32->len);
@@ -321,9 +321,9 @@ static int compat_put_ion_mm_cache_pool_info(
 			struct compat_ion_mm_cache_pool_info __user *data32,
 			struct ion_mm_cache_pool_info __user *data)
 {
-	compat_size_t s;
-	compat_uint_t u;
-	compat_int_t i;
+	compat_size_t s = 0;
+	compat_uint_t u = 0;
+	compat_int_t i = 0;
 	int err;
 
 	err = get_user(s, &data->len);
@@ -344,19 +344,19 @@ static int compat_put_ion_mm_buf_debug_info(
 			struct compat_ion_mm_buf_debug_info __user *data32,
 			struct ion_mm_buf_debug_info __user *data)
 {
-	compat_ulong_t handle;
-	char dbg_name;
-	compat_uint_t value1;
-	compat_uint_t value2;
-	compat_uint_t value3;
-	compat_uint_t value4;
+	compat_ulong_t handle = 0;
+	char dbg_name = 0;
+	compat_uint_t value1 = 0;
+	compat_uint_t value2 = 0;
+	compat_uint_t value3 = 0;
+	compat_uint_t value4 = 0;
 
 	int i, err = 0;
 
 	err = get_user(handle, &data->handle);
 	err |= put_user(handle, &data32->handle);
 	for (i = 0; i < ION_MM_DBG_NAME_LEN; i++) {
-		err = get_user(dbg_name, &data->dbg_name[i]);
+		err |= get_user(dbg_name, &data->dbg_name[i]);
 		err |= put_user(dbg_name, &data32->dbg_name[i]);
 	}
 	err |= get_user(value1, &data->value1);
@@ -373,7 +373,7 @@ static int compat_put_ion_mm_buf_debug_info(
 
 static int compat_get_ion_mm_data(struct compat_ion_mm_data *data32, struct ion_mm_data *data)
 {
-	compat_uint_t mm_cmd;
+	compat_uint_t mm_cmd = 0;
 
 	int err;
 
@@ -410,7 +410,7 @@ static int compat_get_ion_mm_data(struct compat_ion_mm_data *data32, struct ion_
 
 static int compat_put_ion_mm_data(struct compat_ion_mm_data *data32, struct ion_mm_data *data)
 {
-	compat_uint_t mm_cmd;
+	compat_uint_t mm_cmd = 0;
 
 	int err = 0;
 
@@ -440,10 +440,10 @@ static int compat_get_ion_sys_cache_sync_param(
 			struct compat_ion_sys_cache_sync_param __user *data32,
 			struct ion_sys_cache_sync_param __user *data)
 {
-	compat_int_t handle;
-	compat_uptr_t va;
-	compat_size_t size;
-	compat_uint_t sync_type;
+	compat_int_t handle = 0;
+	compat_uptr_t va = 0;
+	compat_size_t size = 0;
+	compat_uint_t sync_type = 0;
 
 	int err;
 
@@ -459,39 +459,13 @@ static int compat_get_ion_sys_cache_sync_param(
 	return err;
 }
 
-static int compat_get_ion_sys_dma_op_param(
-			struct compat_ion_dma_param __user *data32,
-			struct ion_dma_param __user *data)
-{
-	compat_int_t handle;
-	compat_uptr_t va;
-	compat_size_t size;
-	compat_uint_t dma_type;
-	compat_uint_t dma_dir;
-
-	int err;
-
-	err = get_user(handle, &data32->handle);
-	err |= put_user(handle, &data->handle);
-	err |= get_user(va, &data32->va);
-	err |= put_user(compat_ptr(va), &data->va);
-	err |= get_user(size, &data32->size);
-	err |= put_user(size, &data->size);
-	err |= get_user(dma_type, &data32->dma_type);
-	err |= put_user(dma_type, &data->dma_type);
-	err |= get_user(dma_dir, &data32->dma_dir);
-	err |= put_user(dma_dir, &data->dma_dir);
-
-	return err;
-}
-
 static int compat_get_ion_sys_get_phys_param(
 			struct compat_ion_sys_get_phys_param __user *data32,
 			struct ion_sys_get_phys_param __user *data)
 {
-	compat_int_t handle;
-	compat_uint_t phy_addr;
-	compat_size_t len;
+	compat_int_t handle = 0;
+	compat_uint_t phy_addr = 0;
+	compat_size_t len = 0;
 
 	int err;
 
@@ -509,9 +483,9 @@ static int compat_put_ion_sys_get_phys_param(
 			struct compat_ion_sys_get_phys_param __user *data32,
 			struct ion_sys_get_phys_param __user *data)
 {
-	compat_int_t handle;
-	compat_uint_t phy_addr;
-	compat_size_t len;
+	compat_int_t handle = 0;
+	compat_uint_t phy_addr = 0;
+	compat_size_t len = 0;
 
 	int err = 0;
 
@@ -529,42 +503,14 @@ static int compat_get_ion_sys_client_name(
 			struct compat_ion_sys_client_name __user *data32,
 			struct ion_sys_client_name __user *data)
 {
-	char name;
+	char name = 0;
 
-	int i, err;
+	int i, err = 0;
 
 	for (i = 0; i < ION_MM_DBG_NAME_LEN; i++) {
-		err = get_user(name, &data32->name[i]);
+		err |= get_user(name, &data32->name[i]);
 		err |= put_user(name, &data->name[i]);
 	}
-
-	return err;
-}
-
-static int compat_get_ion_sys_get_client_param(
-			struct compat_ion_sys_get_client_param __user *data32,
-			struct ion_sys_get_client_param __user *data)
-{
-	compat_uint_t client;
-
-	int err;
-
-	err = get_user(client, &data32->client);
-	err |= put_user(client, &data->client);
-
-	return err;
-}
-
-static int compat_put_ion_sys_get_client_param(
-			struct compat_ion_sys_get_client_param __user *data32,
-			struct ion_sys_get_client_param __user *data)
-{
-	compat_uint_t client;
-
-	int err = 0;
-
-	err = get_user(client, &data->client);
-	err |= put_user(client, &data32->client);
 
 	return err;
 }
@@ -573,7 +519,7 @@ static int compat_get_ion_sys_data(
 			struct compat_ion_sys_data __user *data32,
 			struct ion_sys_data __user *data)
 {
-	compat_uint_t sys_cmd;
+	compat_uint_t sys_cmd = 0;
 
 	int err;
 
@@ -590,19 +536,9 @@ static int compat_get_ion_sys_data(
 		err |= compat_get_ion_sys_get_phys_param(&data32->get_phys_param, &data->get_phys_param);
 		break;
 	}
-	case ION_SYS_GET_CLIENT:
-	{
-		err |= compat_get_ion_sys_get_client_param(&data32->get_client_param, &data->get_client_param);
-		break;
-	}
 	case ION_SYS_SET_CLIENT_NAME:
 	{
 		err |= compat_get_ion_sys_client_name(&data32->client_name_param, &data->client_name_param);
-		break;
-	}
-	case ION_SYS_DMA_OP:
-	{
-		err |= compat_get_ion_sys_dma_op_param(&data32->dma_param, &data->dma_param);
 		break;
 	}
 	}
@@ -614,7 +550,7 @@ static int compat_put_ion_sys_data(
 			struct compat_ion_sys_data __user *data32,
 			struct ion_sys_data __user *data)
 {
-	compat_uint_t sys_cmd;
+	compat_uint_t sys_cmd = 0;
 
 	int err = 0;
 
@@ -625,11 +561,6 @@ static int compat_put_ion_sys_data(
 	case ION_SYS_GET_PHYS:
 	{
 		err |= compat_put_ion_sys_get_phys_param(&data32->get_phys_param, &data->get_phys_param);
-		break;
-	}
-	case ION_SYS_GET_CLIENT:
-	{
-		err |= compat_put_ion_sys_get_client_param(&data32->get_client_param, &data->get_client_param);
 		break;
 	}
 	default:
@@ -643,8 +574,8 @@ static int compat_get_ion_custom_data(
 			struct compat_ion_custom_data __user *data32,
 			struct ion_custom_data __user *data)
 {
-	compat_uint_t cmd;
-	compat_ulong_t arg;
+	compat_uint_t cmd = 0;
+	compat_ulong_t arg = 0;
 	int err;
 
 	err = get_user(cmd, &data32->cmd);
@@ -659,12 +590,14 @@ static int compat_get_ion_custom_data(
 		struct compat_ion_sys_data *sys_data32;
 		struct ion_sys_data *sys_data;
 
-		err = get_user(arg, &data32->arg);
+		err |= get_user(arg, &data32->arg);
+		if (err)
+			return err;
 		sys_data32 = (struct compat_ion_sys_data *)compat_ptr(arg);
 		sys_data = compat_alloc_user_space(sizeof(*data) + sizeof(*sys_data));
 		if (!sys_data)
 			return -EFAULT;
-		err = compat_get_ion_sys_data(sys_data32, sys_data);
+		err |= compat_get_ion_sys_data(sys_data32, sys_data);
 		err |= put_user((unsigned long)sys_data, &data->arg);
 		break;
 	}
@@ -673,12 +606,14 @@ static int compat_get_ion_custom_data(
 		struct compat_ion_mm_data *mm_data32;
 		struct ion_mm_data *mm_data;
 
-		err = get_user(arg, &data32->arg);
+		err |= get_user(arg, &data32->arg);
+		if (err)
+			return err;
 		mm_data32 = (struct compat_ion_mm_data *)compat_ptr(arg);
 		mm_data = compat_alloc_user_space(sizeof(*data) + sizeof(*mm_data));
 		if (!mm_data)
 			return -EFAULT;
-		err = compat_get_ion_mm_data(mm_data32, mm_data);
+		err |= compat_get_ion_mm_data(mm_data32, mm_data);
 		err |= put_user((unsigned long)mm_data, &data->arg);
 		break;
 	}
@@ -691,8 +626,8 @@ static int compat_put_ion_custom_data(
 			struct compat_ion_custom_data __user *data32,
 		    struct ion_custom_data __user *data)
 {
-	compat_uint_t cmd;
-	compat_ulong_t arg;
+	compat_uint_t cmd = 0;
+	compat_ulong_t arg = 0;
 	int err = 0;
 
 	err = get_user(cmd, &data->cmd);
@@ -707,12 +642,12 @@ static int compat_put_ion_custom_data(
 		struct compat_ion_sys_data *sys_data32;
 		struct ion_sys_data *sys_data;
 
-		err = get_user(arg, &data32->arg);
+		err |= get_user(arg, &data32->arg);
 		sys_data32 = (struct compat_ion_sys_data *)compat_ptr(arg);
-		err = get_user(arg, &data->arg);
+		err |= get_user(arg, &data->arg);
 		sys_data = (struct ion_sys_data *)compat_ptr(arg);
 
-		err = compat_put_ion_sys_data(sys_data32, sys_data);
+		err |= compat_put_ion_sys_data(sys_data32, sys_data);
 		/* err |= put_user((unsigned long)sys_data32, &data32->arg); */
 		break;
 	}
@@ -721,12 +656,12 @@ static int compat_put_ion_custom_data(
 		struct compat_ion_mm_data *mm_data32;
 		struct ion_mm_data *mm_data;
 
-		err = get_user(arg, &data32->arg);
+		err |= get_user(arg, &data32->arg);
 		mm_data32 = (struct compat_ion_mm_data *)compat_ptr(arg);
-		err = get_user(arg, &data->arg);
+		err |= get_user(arg, &data->arg);
 		mm_data = (struct ion_mm_data *)compat_ptr(arg);
 
-		err = compat_put_ion_mm_data(mm_data32, mm_data);
+		err |= compat_put_ion_mm_data(mm_data32, mm_data);
 		/* err |= put_user((unsigned long)mm_data32, &data32->arg); */
 		break;
 	}

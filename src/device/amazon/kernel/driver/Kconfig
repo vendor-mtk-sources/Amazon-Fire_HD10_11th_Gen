@@ -1,0 +1,67 @@
+menu "Amzn"
+
+config AMZN
+	bool "Amazon Common Drivers"
+	default N
+	---help---
+	  Enable support for various drivers needed on the Amazon Fire OS platform
+
+if AMZN
+
+config AMZN_SIGN_OF_LIFE
+	bool "Amazon Sign of Life"
+	help
+	enable the life cycle metrics to log device boot and shutdown information
+
+config AMZN_SIGN_OF_LIFE_RTC
+        bool "Amazon Sign of Life platform implementation"
+        help
+        enable the life cycle metrics to log device boot and shutdown information on specific Platform
+
+config AMZN_POWEROFF_LOG
+	bool "Long press key power off log"
+	default N
+	help
+	enable Long press key power off log
+
+config AMZN_METRICS_LOG
+	bool "Amazon Metrics logger driver"
+	select RING_BUFFER
+	default n
+	---help---
+		Enable Amazon Metrics/Vitals logger driver
+
+config AMZN_METRICS_LOG_TEST
+	tristate "Amazon Metrics logger driver test module"
+	depends on AMZN_METRICS_LOG
+	default n
+	---help---
+		Enable Amazon Metrics/Vitals logger test module
+
+config AMZN_INPUT_KEYCOMBO
+	tristate "Amazon key combo"
+	depends on INPUT
+	select INPUT_KEYCOMBO
+	help
+	  Say Y here if you want to panic kernel / power off when some keys are pressed;
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called amzn_keycombo.
+
+config AMZN_IDME
+	bool "IDME support"
+	depends on PROC_FS
+	help
+	  Select Y here to enable IDME support to read the data
+	  via userspace (i.e. /proc/idme/* entries)
+
+config AMZN_DRV_TEST
+	tristate "Amazon common BSP driver test module"
+	depends on AMZN_METRICS_LOG && AMZN_SIGN_OF_LIFE && AMZN_IDME
+	default n
+	---help---
+		Enable Amazon Common BSP test module
+
+endif # if AMZN
+
+endmenu

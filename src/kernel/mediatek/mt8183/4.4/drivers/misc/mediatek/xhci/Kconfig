@@ -27,7 +27,7 @@ config USB_AMAZON_DOCK
 	depends on USB_MTK_IDDIG
 	default n
 	help
-	  Say Y here if you want to support Amazon dock (Zeus),
+	  Say Y here if you want to support Amazon dock (abc123),
 	  which is a Amazon special Dock, it's different with
 	  ACA Dock.
 

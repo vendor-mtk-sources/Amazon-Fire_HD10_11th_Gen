@@ -47,6 +47,9 @@
 #include <mali_kbase_hwaccess_jm.h>
 #include <mali_kbase_time.h>
 #include <mali_kbase_mem.h>
+#if !MALI_USE_CSF
+#include <mali_kbase_hwaccess_jm.h>
+#endif
 
 #define KBASE_MMU_PAGE_ENTRIES 512
 
@@ -1406,7 +1409,7 @@ static void kbase_mmu_flush_invalidate_noretain(struct kbase_context *kctx,
 		 * recover */
 		dev_err(kbdev->dev, "Flush for GPU page table update did not complete. Issuing GPU soft-reset to recover\n");
 
-		if (kbase_prepare_to_reset_gpu_locked(kbdev))
+		if (kbase_prepare_to_reset_gpu_locked(kbdev, RESET_FLAGS_NONE))
 			kbase_reset_gpu_locked(kbdev);
 	}
 #endif /* KBASE_GPU_RESET_EN */
@@ -1456,7 +1459,8 @@ static void kbase_mmu_flush_invalidate_as(struct kbase_device *kbdev,
 		 */
 		dev_err(kbdev->dev, "Flush for GPU page table update did not complete. Issueing GPU soft-reset to recover\n");
 
-		if (kbase_prepare_to_reset_gpu(kbdev))
+		if (kbase_prepare_to_reset_gpu(
+					kbdev, RESET_FLAGS_HWC_UNRECOVERABLE_ERROR))
 			kbase_reset_gpu(kbdev);
 	}
 #endif /* KBASE_GPU_RESET_EN */
@@ -1563,6 +1567,15 @@ void kbase_mmu_disable(struct kbase_context *kctx)
 	kbase_mmu_flush_invalidate_noretain(kctx, 0, ~0, true);
 
 	kctx->kbdev->mmu_mode->disable_as(kctx->kbdev, kctx->as_nr);
+#if !MALI_USE_CSF
+	/*
+	 * JM GPUs has some L1 read only caches that need to be invalidated
+	 * with START_FLUSH configuration. Purge the MMU disabled kctx from
+	 * the slot_rb tracking field so such invalidation is performed when
+	 * a new katom is executed on the affected slots.
+	 */
+	kbase_backend_slot_kctx_purge_locked(kctx->kbdev, kctx);
+#endif
 }
 KBASE_EXPORT_TEST_API(kbase_mmu_disable);
 
@@ -2085,7 +2098,7 @@ void bus_fault_worker(struct work_struct *data)
 		 * are evicted from the GPU before the switch.
 		 */
 		dev_err(kbdev->dev, "GPU bus error occurred. For this GPU version we now soft-reset as part of bus error recovery\n");
-		reset_status = kbase_prepare_to_reset_gpu(kbdev);
+		reset_status = kbase_prepare_to_reset_gpu(kbdev, RESET_FLAGS_NONE);
 	}
 #endif /* KBASE_GPU_RESET_EN */
 	/* NOTE: If GPU already powered off for suspend, we don't need to switch to unmapped */
@@ -2392,7 +2405,7 @@ static void kbase_mmu_report_fault_and_kill(struct kbase_context *kctx,
 		 * are evicted from the GPU before the switch.
 		 */
 		dev_err(kbdev->dev, "Unhandled page fault. For this GPU version we now soft-reset the GPU as part of page fault recovery.");
-		reset_status = kbase_prepare_to_reset_gpu(kbdev);
+		reset_status = kbase_prepare_to_reset_gpu(kbdev, RESET_FLAGS_NONE);
 	}
 #endif /* KBASE_GPU_RESET_EN */
 	/* switch to UNMAPPED mode, will abort all jobs and stop any hw counter dumping */
@@ -2607,7 +2620,7 @@ void kbase_mmu_interrupt_process(struct kbase_device *kbdev, struct kbase_contex
 			 * point.
 			 */
 			dev_err(kbdev->dev, "GPU bus error occurred. For this GPU version we now soft-reset as part of bus error recovery\n");
-			reset_status = kbase_prepare_to_reset_gpu_locked(kbdev);
+			reset_status = kbase_prepare_to_reset_gpu_locked(kbdev, RESET_FLAGS_NONE);
 			if (reset_status)
 				kbase_reset_gpu_locked(kbdev);
 		}

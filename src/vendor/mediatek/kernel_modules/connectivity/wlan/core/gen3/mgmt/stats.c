@@ -468,6 +468,7 @@ statsParsePktInfo(P_ADAPTER_T prAdapter, PUINT_8 pucPkt, struct sk_buff *skb, UI
 		}
 		break;
 	}
+#if CFG_SUPPORT_WAPI
 	case ETH_WPI_1X:
 	{
 		UINT_8 ucSubType = pucEthBody[3]; /* sub type filed*/
@@ -486,6 +487,7 @@ statsParsePktInfo(P_ADAPTER_T prAdapter, PUINT_8 pucPkt, struct sk_buff *skb, UI
 		}
 		break;
 	}
+#endif
 	case 0x890d:
 		switch (eventType) {
 		case EVENT_RX:

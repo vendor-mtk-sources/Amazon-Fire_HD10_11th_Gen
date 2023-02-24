@@ -226,6 +226,8 @@
 /* Define magic key of test mode (Don't change it for future compatibity) */
 #define PRIV_CMD_TEST_MAGIC_KEY                         2011
 #define PRIV_CMD_TEST_MAGIC_KEY_ICAP                         2013
+#define IW_PRIV_BUF_SIZE			2000
+
 /*******************************************************************************
 *                             D A T A   T Y P E S
 ********************************************************************************

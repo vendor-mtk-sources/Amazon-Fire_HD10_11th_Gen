@@ -164,8 +164,6 @@ VOID nicCmdEventPfmuDataRead(IN P_ADAPTER_T prAdapter, IN P_CMD_INFO_T prCmdInfo
 		u4QueryInfoLen = sizeof(PFMU_DATA);
 
 		g_rPfmuData = *prEventPfmuDataRead;
-
-		kalOidComplete(prGlueInfo, prCmdInfo->fgSetQuery, u4QueryInfoLen, WLAN_STATUS_SUCCESS);
 	}
 
 	DBGLOG(INIT, INFO, "=========== Before ===========\n");
@@ -217,7 +215,6 @@ VOID nicCmdEventPfmuTagRead(IN P_ADAPTER_T prAdapter, IN P_CMD_INFO_T prCmdInfo,
 	g_rPfmuTag1 = prPfumTagRead->ru4TxBfPFMUTag1;
 	g_rPfmuTag2 = prPfumTagRead->ru4TxBfPFMUTag2;
 
-	kalOidComplete(prGlueInfo, prCmdInfo->fgSetQuery, u4QueryInfoLen, WLAN_STATUS_SUCCESS);
 	DBGLOG(INIT, INFO, "========================== (R)Tag1 info ==========================\n");
 
 	DBGLOG(INIT, INFO, " Row data0 : %x, Row data1 : %x, Row data2 : %x, Row data3 : %x\n",
@@ -2272,3 +2269,34 @@ void nicCmdEventGetBeacontimeCntStatistics(IN P_ADAPTER_T prAdapter,
 
 }
 #endif
+#if CFG_SUPPORT_RSSI_STATISTICS
+void nicCmdEventRecordTxRxCount(IN P_ADAPTER_T prAdapter,
+	IN P_CMD_INFO_T prCmdInfo, IN PUINT_8 pucEventBuf)
+{
+	struct EVENT_RX_INFO *prEvent;
+	struct PARAM_GET_RSSI_STATISTICS *prQueryRssiStatistics;
+	UINT_32 u4RxPktNum;
+
+	ASSERT(prAdapter);
+	ASSERT(prCmdInfo);
+	ASSERT(pucEventBuf);
+
+	prEvent = (struct EVENT_RX_INFO *)pucEventBuf;
+	DBGLOG(REQ, LOUD, "nicCmdEventRecordTxRxCount prAdapter->u4RxUcTotalPktNum =%d\n", prAdapter->u4RxTotalPktNum);
+
+	/* get Tx/Rx packet count */
+	u4RxPktNum = (prEvent->u4RxPktNum > prAdapter->u4RxTotalPktNum) ? (prEvent->u4RxPktNum - prAdapter->u4RxTotalPktNum) : 0;
+
+	prAdapter->u4RxPktNum = u4RxPktNum;
+	prAdapter->u4RxTotalPktNum = prEvent->u4RxPktNum;
+
+	DBGLOG(REQ, LOUD, "nicCmdEventRecordTxRxCount u4RxPktNum= %d, prEvent->u4RxPktNum =%d\n", u4RxPktNum, prEvent->u4RxPktNum);
+	if (prCmdInfo->fgIsOid) {
+		DBGLOG(REQ, LOUD, "cmdinfo->flgIsoid\n");
+		kalOidComplete(prAdapter->prGlueInfo, prCmdInfo->fgSetQuery,
+			       sizeof(struct PARAM_RX_COUNT),
+			       WLAN_STATUS_SUCCESS);
+	}
+}
+#endif
+

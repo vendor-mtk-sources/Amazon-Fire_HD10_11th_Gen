@@ -1,0 +1,149 @@
+Amazon common BSP drivers contain sign_of_life, logger, idme drivers, which are used on
+all Amazon products.
+
+This directory contains all common parts of these drivers. For new product, we only pay
+attention to platform related implementation.
+
+1) Porting Guide
+1. Copy amzn_sign_of_life_rtc.h in sample directory to the include/linux directory in kernel code;
+2. Enable related kernel configurations in kernel;
+3. Modify Kconfig and Makfile file in kernel to compile the common bsp driver;
+4. Build kernel image, symbol links will be created for amzn_sign_of_life.h, amzn_metricslog.h,
+   amzn_keycombo.h and amzn_idme.h in kernel_src/include/linux directory.
+5. For sign of life driver, need to modify RTC registers, bit mask, shift used for each
+   life cycle reason(boot, shutdown, thermal shutdown, special mode reason) in amzn_sign_of_life_rtc.h.
+   This driver also contains below features:
+   => Support configuring specific life cycle reason in each product, which needs to
+   modify each life cycle reason enumeration variable(rtc_boot_reason_t,rtc_shutdown_reason_t,
+   rtc_thermal_shutdown_reason_t, rtc_special_mode_reason_t) in amzn_sign_of_life_rtc.h.
+
+   => Implement setting WARMBOOT_BY_SW, SHUTDOWN_BY_SW, WARMBOOT_BY_KERNEL_PANIC by
+   register notifier_call in reboot and panic notifier charin, which should work on all products,
+   please double check.
+
+   => Support parity check on all life cycle reason RTC bits.
+
+   => Below is the number of each life cycle reason this driver supporting:
+      warm boot reason number: 4
+      cold boot reason number: 3
+      shutdown reason number:  5
+      thermal shutdown reason number: 7
+      special reason number:   4
+
+6. For keycombo driver, register_keycombo_notifier to do anything necessary at platform side such as
+   software long press shutdown implementation.
+
+2) Test Guide
+There also has test module for these drivers. Below is the test method:
+
+1. Set CONFIG_AMZN_DRV_TEST=y in kernel configuration;
+
+2. Compile and flash kernel image;
+
+3. There will be below directory and nodes under /proc:
+    /proc/amzn_drvs/
+        |------idme
+        |------logger
+        |------sign_of_life
+
+   You can use these debug nodes to test related feature and get help info.
+   For example:
+   =============================================================================
+   /proc/amzn_drvs # cat sign_of_life
+   sign_of_life=0
+
+   Help Info:
+   echo [index] > sign_of_life to test below items,then cat sign_of_life to check result:
+
+   0 ---  Show Help Info
+   1 ---  Test Boot/Shutdown/Thermal/Special Interfaces
+   2 ---  Warm Boot By Software
+   3 ---  Warm Boot By Kernel Panic
+   4 ---  Warm Boot By Kernel Watchdog
+   5 ---  Warm Boot By HW Watchdog
+   6 ---  Cold Boot By Power Key
+   7 ---  Cold Boot By USB
+   8 ---  Cold Boot By Power Supply
+   9 ---  Software Shutdown
+   10 --  Long Pressed Power Key Shutdown
+   11 --  Sudden Power Loss Shutdown
+   12 --  Unknown Shutdown
+   13 --  PMIC Overheated Thermal Shutdown
+   14 --  Battery Overheated Thermal Shutdown
+   15 --  SOC Overheated Thermal Shutdown
+   16 --  PCB Overheated Thermal Shutdown
+   17 --  WIFI Overheated Thermal Shutdown
+   18 --  Modem Overheated Thermal Shutdown
+   19 --  Special Mode: Low Battery Shutdown
+   20 --  Special Mode: Power Off Charging Mode
+   21 --  Special Mode: Factory Reset Reboot
+   22 --  Special Mode: OTA Reboot
+   23 --  Special Mode: RTC Check Failed
+   24 --  Print all Boot/Shutdown/Thermal/Special life cycle reason
+   25 --  Print Boot up life cycle reasons
+   26 --  Clear all life cycle reasons
+
+
+   /proc/amzn_drvs # echo 2 > sign_of_life
+   /proc/amzn_drvs # cat sign_of_life
+   sign_of_life=2
+   test result:
+   life cycle reason: Warm Boot By Software
+   =============================================================================
+
+   Below is the idme driver test step:
+   ============================================================================
+   /proc/amzn_drvs # cat idme
+   idme=0
+
+   Help Info:
+   echo [index] > idme to test below items,then cat idme to check result:
+
+   0 ---  Show Help Info
+   1 ---  Test idme_get_item Interface
+   2 ---  idme_get_board_type
+   3 ---  idme_get_board_rev
+   4 ---  idme_get_bootmode
+   5 ---  idme_get_dev_flags_value
+   6 ---  board_has_wan
+
+
+   /proc/amzn_drvs # echo 3 > idme
+   /proc/amzn_drvs # cat idme
+   idme=3
+   test result:
+   board_ver: 16
+   ============================================================================
+
+   Below is logger driver test step:
+   ===========================================================================
+   /proc/amzn_drvs # cat logger
+   logger=0
+
+   Help Info:
+   echo [index] > logger to test below items,then cat logger to check result:
+
+   0 ---  Show Help Info
+   1 ---  Test Metrics and Vitals interfaces
+   2 ---  Test log_to_metrics interface
+   3 ---  Test log_to_vitals interface
+
+
+   /proc/amzn_drvs # echo 2 > logger
+   /proc/amzn_drvs # cat logger
+   logger=2
+   test result:
+   Run 'adb logcat -b metrics' to check.
+
+   /proc/amzn_drvs # logcat -b metrics
+   04-01 12:16:51.329  3530  3530 I metrics_test: TEST:METRIC:VALUE_A=1;CT;1,VALUE_B=0;CT;1:NR
+   04-01 12:16:51.329  3530  3530 I kernel  : TEST:METRIC:VALUE_A=1;CT;1,VALUE_B=0;CT;1:NR
+   04-01 12:16:51.329  3530  3530 I metrics_test: T_e_s_t_:M_E_T_R_I_C:V_A_L_U_E_A=1;CT;1,V_A_L_U_E_B=0;CT;1:NR
+   04-01 12:16:51.329  3530  3530 I kernel  : T_e_s_t_:M_E_T_R_I_C:V_A_L_U_E_A=1;CT;1,V_A_L_U_E_B=0;CT;1:NR
+   04-01 12:17:10.969  3530  3530 I metrics_test: TEST:METRIC:VALUE_A=1;CT;1,VALUE_B=0;CT;1:NR
+   04-01 12:17:10.969  3530  3530 I kernel  : TEST:METRIC:VALUE_A=1;CT;1,VALUE_B=0;CT;1:NR
+   04-01 12:17:10.969  3530  3530 I metrics_test: T_e_s_t_:M_E_T_R_I_C:V_A_L_U_E_A=1;CT;1,V_A_L_U_E_B=0;CT;1:NR
+   04-01 12:17:10.969  3530  3530 I kernel  : T_e_s_t_:M_E_T_R_I_C:V_A_L_U_E_A=1;CT;1,V_A_L_U_E_B=0;CT;1:NR
+   ============================================================================
+
+   NOTE: For logger drivers, after echo 1/2/3 > logger, please run "logcat -b metrics/vitails" to check the log printing.

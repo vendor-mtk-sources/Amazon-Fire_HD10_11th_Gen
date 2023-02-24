@@ -1352,8 +1352,11 @@ static int __mt_i2c_transfer(struct mt_i2c *i2c,
 			ret = -EINVAL;
 			goto err_exit;
 		}
-		if (msgs->buf == NULL) {
-			dev_dbg(i2c->dev, " data buffer is NULL.\n");
+		if (msgs->buf == NULL || msgs->len == 0) {
+			if (msgs->buf == NULL)
+				dev_dbg(i2c->dev, " data buffer is NULL.\n");
+			else
+				dev_dbg(i2c->dev, "Message length is 0.\n");
 			ret = -EINVAL;
 			goto err_exit;
 		}
@@ -1643,7 +1646,8 @@ static irqreturn_t mt_i2c_irq(int irqno, void *dev_id)
 
 static u32 mt_i2c_functionality(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_10BIT_ADDR | I2C_FUNC_SMBUS_EMUL;
+	return I2C_FUNC_I2C | I2C_FUNC_10BIT_ADDR |
+	       (I2C_FUNC_SMBUS_EMUL & ~I2C_FUNC_SMBUS_QUICK);
 }
 
 static const struct i2c_algorithm mt_i2c_algorithm = {

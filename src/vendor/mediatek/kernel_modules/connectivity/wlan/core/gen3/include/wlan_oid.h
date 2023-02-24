@@ -2553,4 +2553,18 @@ WLAN_STATUS
 wlanoidQueryBandWidth(IN P_ADAPTER_T prAdapter,
 			  IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
 
+WLAN_STATUS
+wlanoidQueryR1xTxDoneStatus(IN P_ADAPTER_T prAdapter,
+			  IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
+
+WLAN_STATUS
+wlanoidSetR1xTxDoneStatus(IN P_ADAPTER_T prAdapter,
+			  IN PVOID pvSetBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
+#if CFG_SUPPORT_RSSI_STATISTICS
+uint32_t
+wlanoidQueryRssiStatistics(IN P_ADAPTER_T prAdapter,
+		 OUT PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen,
+		 OUT PUINT_32 pu4QueryInfoLen);
+#endif
+
 #endif /* _WLAN_OID_H */

@@ -865,7 +865,10 @@ static ssize_t fps_tm_count_write(struct file *filp, const char __user *buf, siz
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	if (kstrtoint(tmp, 10, &tm_input_fps) == 0) {
 
 		mtk_cooler_fps_dprintk("[%s] = %d\n", __func__, tm_input_fps);

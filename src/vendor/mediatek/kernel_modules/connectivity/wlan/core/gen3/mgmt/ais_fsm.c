@@ -610,6 +610,12 @@ VOID aisFsmStateInit_JOIN(IN P_ADAPTER_T prAdapter, P_BSS_DESC_T prBssDesc)
 	} else {
 		ASSERT(0);
 	}
+#if CFG_SUPPORT_RSSI_STATISTICS
+	prAdapter->u4RxTotalPktNum = 0;
+	wlanGetTxRxCount(prAdapter, prAisBssInfo->ucBssIndex);
+	prAdapter->ucAisConnectionStatus = 1;
+#endif
+
 
 	/* 4 <5> Overwrite Connection Setting for eConnectionPolicy == ANY (Used by Assoc Req) */
 	if (prBssDesc->ucSSIDLen)
@@ -1268,10 +1274,13 @@ VOID aisFsmSteps(IN P_ADAPTER_T prAdapter, ENUM_AIS_STATE_T eNextState)
 			if (prAisFsmInfo->ucConnTrialCount > AIS_ROAMING_CONNECTION_TRIAL_LIMIT) {
 #if CFG_SUPPORT_ROAMING
 				/*add for fos roaming metrics*/
-				if (prBssDesc->u2JoinStatus == STATUS_CODE_AUTH_TIMEOUT)
-					prRoamingFsmInfo->eRoamingStatus = ROAMING_AUTH_FAIL;
-				else
-					prRoamingFsmInfo->eRoamingStatus = ROAMING_ASSOC_FAIL;
+				if (prBssDesc) {
+					if (prBssDesc->u2JoinStatus == STATUS_CODE_AUTH_TIMEOUT)
+						prRoamingFsmInfo->eRoamingStatus = ROAMING_AUTH_FAIL;
+					else
+						prRoamingFsmInfo->eRoamingStatus = ROAMING_ASSOC_FAIL;
+				} else
+					prRoamingFsmInfo->eRoamingStatus = ROAMING_CURRENT_IS_BEST;
 
 				roamingFsmRunEventFail(prAdapter, ROAMING_FAIL_REASON_CONNLIMIT);
 #endif /* CFG_SUPPORT_ROAMING */
@@ -2520,7 +2529,6 @@ VOID aisFsmStateAbort(IN P_ADAPTER_T prAdapter, UINT_8 ucReasonOfDisconnect, BOO
 		ucReasonOfDisconnect != DISCONNECT_REASON_CODE_REASSOCIATION &&
 		ucReasonOfDisconnect != DISCONNECT_REASON_CODE_ROAMING)
 		wmmNotifyDisconnected(prAdapter);
-
 	/* 4 <2> Abort current job. */
 	switch (prAisFsmInfo->eCurrentState) {
 	case AIS_STATE_IDLE:
@@ -2762,6 +2770,8 @@ void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 	UINT_8 metadata1;
 	UINT_16 metadata2;
 	int ret = -1;
+	int minerva_ret = -1;
+	uint8_t metadata_str2[128];
 
 	DEBUGFUNC("aisNotifyAutoReconnectMetic()");
 	if (prAisBssInfo == NULL || prStaRec == NULL) {
@@ -2774,15 +2784,21 @@ void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 	metadata1 = prAisBssInfo->ucPrimaryChannel;
 	metadata2 = prStaRec->u2ReasonCode;
 	kalMemSet(metadata_str, 0x00, 128);
+	kalMemSet(metadata_str2, 0x00, 128);
 	if (bConnect == TRUE) {
 		key_str [0]= 'S';
 		sprintf(metadata_str,
 			"!{\"d\"#{\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"}}", metadata, metadata1);
+		sprintf(metadata_str2,
+			"metadata=%d;SY,metadata1=%d;SY:", metadata, metadata1);
 	}
 	else {
 		key_str [0]= 'F';
 		sprintf(metadata_str,
 			"!{\"d\"#{\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"$\"metadata2\"#\"%d\"}}",
+			metadata, metadata1, metadata2);
+		sprintf(metadata_str2,
+			"metadata=%d;SY,metadata1=%d;SY,metadata2=%d;SY:",
 			metadata, metadata1, metadata2);
 	}
 
@@ -2793,6 +2809,11 @@ void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 		DBGLOG(AIS, ERROR,
 			"log_counter_to_vitals fail: auto reconnect reason = %d %d\n",
 			metadata,ret);
+	minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "conn-num-autoreconnects", key_str, 1, metadata_str2);
+	if (minerva_ret)
+		DBGLOG(AIS, ERROR,
+			"minerva_log_counter_to_vitals fail: auto reconnect reason = %d %d\n",
+			metadata, minerva_ret);
 }
 #endif
 
@@ -3333,7 +3354,9 @@ aisIndicationOfMediaStateToHost(IN P_ADAPTER_T prAdapter,
 
 		if (eConnectionState == PARAM_MEDIA_STATE_CONNECTED) {
 			rEventConnStatus.ucReasonOfDisconnect = DISCONNECT_REASON_CODE_RESERVED;
-
+#if CFG_SUPPORT_RSSI_STATISTICS
+			prAdapter->ucAisConnectionStatus = 2;
+#endif
 			if (prAisBssInfo->eCurrentOPMode == OP_MODE_INFRASTRUCTURE) {
 				rEventConnStatus.ucInfraMode = (UINT_8) NET_TYPE_INFRA;
 				rEventConnStatus.u2AID = prAisBssInfo->u2AssocId;
@@ -3384,6 +3407,9 @@ aisIndicationOfMediaStateToHost(IN P_ADAPTER_T prAdapter,
 		if (eConnectionState == PARAM_MEDIA_STATE_DISCONNECTED) {
 			prAisFsmInfo->prTargetBssDesc = NULL;
 			prAisFsmInfo->prTargetStaRec = NULL;
+#if CFG_SUPPORT_RSSI_STATISTICS
+			prAdapter->ucAisConnectionStatus = 3;
+#endif
 		}
 	} else {
 		/* NOTE: Only delay the Indication of Disconnect Event */
@@ -6326,6 +6352,7 @@ VOID aisFsmAntSwitchScan(P_ADAPTER_T prAdapter)
 
 	prScanReqMsg->eScanChannel = SCAN_CHANNEL_SPECIFIED;
 	prScanReqMsg->ucChannelListNum = AIS_ANT_SW_SCN_CHANNEL_COUNT;
+	prScanReqMsg->ucScnFuncMask = ENUM_SCN_ANTSWITCH_EN;
 
 	for (int i = 0; i < AIS_ANT_SW_SCN_CHANNEL_COUNT; i++) {
 		prScanReqMsg->arChnlInfoList[i].eBand = prAdapter->prAisBssInfo->eBand;

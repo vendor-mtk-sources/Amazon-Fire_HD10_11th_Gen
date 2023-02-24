@@ -353,7 +353,7 @@ struct _STA_RECORD_T {
 	P_TX_BA_ENTRY_T aprTxBaTable[TID_NUM];
 #endif
 
-	FRAG_INFO_T rFragInfo[MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS];
+	FRAG_INFO_T rFragInfo[TID_NUM + 1][MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS];
 
 	/* SEC_INFO_T              rSecInfo; *//* The security state machine */
 

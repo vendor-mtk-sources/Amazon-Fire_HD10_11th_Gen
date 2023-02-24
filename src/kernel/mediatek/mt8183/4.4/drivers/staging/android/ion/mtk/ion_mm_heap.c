@@ -199,29 +199,6 @@ static int ion_mm_heap_allocate(struct ion_heap *heap,
 	unsigned long long start, end;
 	unsigned long user_va = 0;
 
-#ifdef CONFIG_MTK_M4U
-	if (heap->id == ION_HEAP_TYPE_MULTIMEDIA_MAP_MVA) {
-		/*for va-->mva case, align is used for va value*/
-		table = m4u_create_sgtable(align, (unsigned int)size);
-		user_va = align;
-		if (size % PAGE_SIZE != 0)
-			IONDBG("%s va(0x%lx)size(%ld) not align page.\n", __func__, user_va, size);
-		goto map_mva_exit;
-	}
-
-	if (heap->id == ION_HEAP_TYPE_MULTIMEDIA_PA2MVA) {
-		table = kzalloc(sizeof(*table), GFP_KERNEL);
-		if (!table) {
-			IONMSG("%s kzalloc failed table is null.\n", __func__);
-			goto err;
-		}
-		sg_alloc_table(table, 1, GFP_KERNEL);
-		sg_dma_address(table->sgl) = align;
-		sg_dma_len(table->sgl) = size;
-
-		goto map_mva_exit;
-	}
-#endif
 	if (align > PAGE_SIZE) {
 		IONMSG("%s align %lu is larger than PAGE_SIZE.\n", __func__, align);
 		return -EINVAL;
@@ -284,9 +261,7 @@ static int ion_mm_heap_allocate(struct ion_heap *heap,
 		list_del(&info->list);
 		kfree(info);
 	}
-#ifdef CONFIG_MTK_M4U
-map_mva_exit:
-#endif
+
 	/* create MM buffer info for it */
 	buffer_info = kzalloc(sizeof(*buffer_info), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(buffer_info)) {
@@ -376,12 +351,6 @@ void ion_mm_heap_free(struct ion_buffer *buffer)
 	int i;
 
 	mm_heap_total_memory -= buffer->size;
-#ifdef CONFIG_MTK_M4U
-	if (heap->id == ION_HEAP_TYPE_MULTIMEDIA_MAP_MVA) {
-		ion_mm_heap_free_buffer_info(buffer);
-		return;
-	}
-#endif
 
 	/* uncached pages come from the page pools, zero them before returning*/
 	 /*for security purposes (other allocations are zerod at alloc time */
@@ -431,7 +400,6 @@ static int ion_mm_heap_phys(struct ion_heap *heap, struct ion_buffer *buffer,
 	struct ion_mm_buffer_info *buffer_info = (struct ion_mm_buffer_info *)buffer->priv_virt;
 	port_mva_info_t port_info;
 	int ret = 0;
-	bool non_vmalloc_request = false;
 
 	if (!buffer_info) {
 		IONMSG("[ion_mm_heap_phys] Error. Invalid buffer.\n");
@@ -464,27 +432,16 @@ static int ion_mm_heap_phys(struct ion_heap *heap, struct ion_buffer *buffer,
 			IONMSG("ion_mm_heap_phys: config buffer fail\n");
 			return -EFAULT;
 		}
-#ifdef CONFIG_MTK_M4U
-		if (heap->id == ION_HEAP_TYPE_MULTIMEDIA_MAP_MVA) {
-			port_info.va = (unsigned long)buffer_info->VA;
-			port_info.flags |= M4U_FLAGS_SG_READY;
-			if ((port_info.va < PAGE_OFFSET) &&
-			    (port_info.va < VMALLOC_START || port_info.va > VMALLOC_END)) {
-				/*userspace va without vmalloc, has no page struct*/
-				non_vmalloc_request = true;
-			}
-		}
-#endif
 
 		ret = m4u_alloc_mva_sg(&port_info, buffer->sg_table);
 
 		*(unsigned int *)addr = port_info.mva;
 
 		if (ret < 0) {
-			IONMSG("[ion_mm_heap_phys]Error: port %d MVA(0x%x) fail(region 0x%x-0x%x) (VA 0x%lx-%zu-%d)\n",
+			IONMSG("[ion_mm_heap_phys]Error: port %d MVA(0x%x) fail(region 0x%x-0x%x) (VA 0x%lx-%zu)\n",
 			       port_info.eModuleID, *(unsigned int *)addr,
 			       port_info.iova_start, port_info.iova_end,
-			       (unsigned long)buffer_info->VA, buffer->size, non_vmalloc_request);
+			       (unsigned long)buffer_info->VA, buffer->size);
 			*(unsigned int *)addr = 0;
 			if (port_info.flags > 0)
 				buffer_info->FIXED_MVA = 0;
@@ -501,10 +458,9 @@ static int ion_mm_heap_phys(struct ion_heap *heap, struct ion_buffer *buffer,
 	}
 
 	if (port_info.flags > 0)
-		IONDBG("[ion_mm_heap_phys]Port %d, in_len 0x%x, MVA(0x%x-%zu) (region 0x%x--0x%x) (VA 0x%lx-%d)\n",
+		IONDBG("[ion_mm_heap_phys]Port %d, in_len 0x%x, MVA(0x%x-%zu) (region 0x%x--0x%x) (VA 0x%lx)\n",
 		       port_info.eModuleID, *(unsigned int *)len, *(unsigned int *)addr, buffer->size,
-		       buffer_info->iova_start, buffer_info->iova_end, (unsigned long)buffer_info->VA,
-		       non_vmalloc_request);
+		       buffer_info->iova_start, buffer_info->iova_end, (unsigned long)buffer_info->VA);
 
 	*len = port_info.BufSize;
 
@@ -558,6 +514,16 @@ static int __do_dump_share_fd(const void *data, struct file *file, unsigned fd)
 
 	buffer = ion_drv_file_to_buffer(file);
 	if (IS_ERR_OR_NULL(buffer))
+		return 0;
+
+	/*
+	 * secure heap buffer struct is different with mm_heap buffer,
+	 * and it isn't public, don't dump here.
+	 *
+	 * only dump supported heap type in ion_mm_heap.c
+	 */
+	if (buffer->heap->type != (unsigned int)ION_HEAP_TYPE_MULTIMEDIA &&
+	    buffer->heap->type != (unsigned int)ION_HEAP_TYPE_SYSTEM)
 		return 0;
 
 	bug_info = (struct ion_mm_buffer_info *)buffer->priv_virt;
@@ -962,13 +928,26 @@ long ion_mm_ioctl(struct ion_client *client, unsigned int cmd, unsigned long arg
 	enum ion_heap_type buffer_type = 0;
 
 	ION_FUNC_ENTER;
-	if (from_kernel)
-		param = *(struct ion_mm_data *)arg;
-	else
-		ret_copy = copy_from_user(&param, (void __user *)arg, sizeof(struct ion_mm_data));
 
-	if (ret_copy)
-		return -EINVAL;
+	if (!arg) {
+		IONMSG("%s:err arg = NULL. %s(%s),k:%d\n",
+		       __func__, client->name, client->dbg_name, from_kernel);
+		ret = -EINVAL;
+		goto ioctl_out;
+	}
+	if (from_kernel) {
+		param = *(struct ion_mm_data *)arg;
+	} else {
+		ret_copy = copy_from_user(&param, (void __user *)arg,
+					  sizeof(struct ion_mm_data));
+		if (ret_copy != 0) {
+			IONMSG("%s:err arg copy failed, ret_copy = %lu. %s(%s),%d, k:%d\n",
+			       __func__, ret_copy, client->name, client->dbg_name,
+			       client->pid, from_kernel);
+			ret = -EFAULT;
+			goto ioctl_out;
+		}
+	}
 
 	switch (param.mm_cmd) {
 	case ION_MM_CONFIG_BUFFER:
@@ -997,6 +976,7 @@ long ion_mm_ioctl(struct ion_client *client, unsigned int cmd, unsigned long arg
 				if (param.config_buffer_param.module_id < 0) {
 					IONMSG("ION_MM_CONFIG_BUFFER module_id error:%d-%d,name %16.s!!!\n",
 					       param.config_buffer_param.module_id, buffer->heap->type, client->name);
+					ion_drv_put_kernel_handle(kernel_handle);
 					return -EFAULT;
 				}
 				if (((buffer_info->MVA == 0) && (param.mm_cmd == ION_MM_CONFIG_BUFFER)) ||
@@ -1025,7 +1005,7 @@ long ion_mm_ioctl(struct ion_client *client, unsigned int cmd, unsigned long arg
 			} else {
 				IONMSG("[ion_heap]: Error. Cannot configure buffer that is not from %c heap.\n",
 				       buffer->heap->type);
-				ret = 0;
+				ret = -EINVAL;
 			}
 			ion_drv_put_kernel_handle(kernel_handle);
 		} else {
@@ -1129,13 +1109,29 @@ long ion_mm_ioctl(struct ion_client *client, unsigned int cmd, unsigned long arg
 		ret = -EFAULT;
 	}
 
-	if (from_kernel)
-		*(struct ion_mm_data *)arg = param;
-	else
-		ret_copy = copy_to_user((void __user *)arg, &param, sizeof(struct ion_mm_data));
+	if (ret) {
+		IONMSG("[%s]:failed to finish io-cmd(%d). %s(%s),%d, k:%d\n",
+		       __func__, param.mm_cmd,
+		       client->name, client->dbg_name,
+		       client->pid, from_kernel);
+		goto ioctl_out;
+	}
 
-	if (ret_copy)
-		return -EINVAL;
+	if (from_kernel) {
+		*(struct ion_mm_data *)arg = param;
+	} else {
+		ret_copy =
+		    copy_to_user((void __user *)arg, &param,
+				 sizeof(struct ion_mm_data));
+		if (ret_copy) {
+			IONMSG("%s: copytouser failed, ret = %lu. %s(%s),%d, k:%d\n",
+			       __func__, ret_copy, client->name, client->dbg_name,
+			       client->pid, from_kernel);
+			ret = -EFAULT;
+		}
+	}
+
+ioctl_out:
 
 	ION_FUNC_LEAVE;
 	return ret;

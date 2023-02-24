@@ -1036,6 +1036,8 @@ static int _ioctl_wait_all_jobs_done(unsigned long arg)
 	unsigned int session_id = (unsigned int)arg;
 	struct frame_queue_head_t *head;
 	int ret = 0;
+	if (session_id > MAX_SESSION_COUNT - 1)
+		return -EINVAL;
 
 	head = get_frame_queue_head(session_id);
 	if (!head) {

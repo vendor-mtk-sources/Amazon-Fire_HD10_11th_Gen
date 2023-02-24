@@ -307,6 +307,8 @@ struct fb_post_video_buffer {
 	unsigned int width, height;
 };
 
+struct fb_info *mtkfb_get_fb_info(void);
+
 #if defined(CONFIG_MACH_MT6735) || defined(CONFIG_MACH_MT6735M)\
 	|| defined(CONFIG_MACH_MT6753) || defined(CONFIG_MACH_MT8167)
 extern unsigned int EnableVSyncLog;

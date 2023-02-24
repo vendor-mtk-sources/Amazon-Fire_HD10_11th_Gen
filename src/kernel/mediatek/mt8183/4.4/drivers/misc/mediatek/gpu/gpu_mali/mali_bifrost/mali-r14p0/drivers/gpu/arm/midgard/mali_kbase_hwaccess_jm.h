@@ -29,6 +29,15 @@
 #define _KBASE_HWACCESS_JM_H_
 
 /**
+ *  * RESET_FLAGS_NONE - Flags for kbase_prepare_to_reset_gpu
+ *   */
+#define RESET_FLAGS_NONE (0U)
+
+/* This reset should be treated as an unrecoverable error by HW counter logic
+ * */
+#define RESET_FLAGS_HWC_UNRECOVERABLE_ERROR ((unsigned int)(1 << 0))
+
+/**
  * kbase_backend_run_atom() - Run an atom on the GPU
  * @kbdev:	Device pointer
  * @atom:	Atom to run
@@ -281,6 +290,7 @@ u32 kbase_backend_get_current_flush_id(struct kbase_device *kbdev);
 /**
  * kbase_prepare_to_reset_gpu - Prepare for resetting the GPU.
  * @kbdev: Device pointer
+ * @flags: Bitfield indicating impact of reset (see flag defines)
  *
  * This function just soft-stops all the slots to ensure that as many jobs as
  * possible are saved.
@@ -290,7 +300,7 @@ u32 kbase_backend_get_current_flush_id(struct kbase_device *kbdev);
  * - false - Another thread is performing a reset, kbase_reset_gpu should
  *                not be called.
  */
-bool kbase_prepare_to_reset_gpu(struct kbase_device *kbdev);
+bool kbase_prepare_to_reset_gpu(struct kbase_device *kbdev, unsigned int flags);
 
 /**
  * kbase_reset_gpu - Reset the GPU
@@ -309,6 +319,7 @@ void kbase_reset_gpu(struct kbase_device *kbdev);
 /**
  * kbase_prepare_to_reset_gpu_locked - Prepare for resetting the GPU.
  * @kbdev: Device pointer
+ * @flags: Bitfield indicating impact of reset (see flag defines)
  *
  * This function just soft-stops all the slots to ensure that as many jobs as
  * possible are saved.
@@ -318,7 +329,8 @@ void kbase_reset_gpu(struct kbase_device *kbdev);
  * - false - Another thread is performing a reset, kbase_reset_gpu should
  *                not be called.
  */
-bool kbase_prepare_to_reset_gpu_locked(struct kbase_device *kbdev);
+bool kbase_prepare_to_reset_gpu_locked(struct kbase_device *kbdev,
+			unsigned int flags);
 
 /**
  * kbase_reset_gpu_locked - Reset the GPU
@@ -374,5 +386,22 @@ void kbase_job_slot_hardstop(struct kbase_context *kctx, int js,
  * on GPU which supports protected mode switching natively.
  */
 extern struct protected_mode_ops kbase_native_protected_ops;
+
+/**
+ * kbase_backend_slot_kctx_purge_locked - Perform a purge on the slot_rb tracked
+ *                                        kctx
+ *
+ * @kbdev:	Device pointer
+ * @kctx:	The kbase context that needs to be purged from slot_rb[]
+ *
+ * For JM GPUs, the L1 read only caches may need a start_flush invalidation,
+ * potentially on all slots (even if the kctx was only using a single slot),
+ * following a context termination or address-space ID recycle. This function
+ * performs a clean-up purge on the given kctx which if it has been tracked by
+ * slot_rb[] objects.
+ *
+ * Caller must hold kbase_device->hwaccess_lock.
+ */
+void kbase_backend_slot_kctx_purge_locked(struct kbase_device *kbdev, struct kbase_context *kctx);
 
 #endif /* _KBASE_HWACCESS_JM_H_ */

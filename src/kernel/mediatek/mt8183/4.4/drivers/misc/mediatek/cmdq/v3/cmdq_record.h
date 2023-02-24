@@ -98,6 +98,9 @@ struct cmdqRecStruct {
 	void *prop_addr;
 	u32 prop_size;
 	struct CmdqRecExtend ext;
+
+	/* Readback slot protection */
+	s32 slot_ids[8];
 };
 
 /* typedef dma_addr_t cmdqBackupSlotHandle; */

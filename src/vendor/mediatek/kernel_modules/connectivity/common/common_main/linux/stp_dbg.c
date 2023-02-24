@@ -410,7 +410,7 @@ static _osal_inline_ INT32 stp_dbg_core_dump_post_handle(P_WCN_CORE_DUMP_T dmp)
 			pDtr = osal_strchr(pStr, '-');
 			if (pDtr != NULL) {
 				tmp = pDtr - pStr;
-				tmp = (tmp > STP_CORE_DUMP_INFO_SZ) ? STP_CORE_DUMP_INFO_SZ : tmp;
+				tmp = (tmp > STP_CORE_DUMP_INFO_SZ - osal_strlen(INFO_HEAD)) ? STP_CORE_DUMP_INFO_SZ - osal_strlen(INFO_HEAD) : tmp;
 				osal_memcpy(&dmp->info[osal_strlen(INFO_HEAD)], pStr, tmp);
 				dmp->info[osal_strlen(dmp->info) + 1] = '\0';
 			} else {
@@ -507,40 +507,209 @@ static _osal_inline_ INT32 stp_dbg_core_dump_reset(P_WCN_CORE_DUMP_T dmp, UINT32
 	return 0;
 }
 
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+int minerva_log_counter_to_vitals(android_LogPriority priority,
+		const char *source, const char *key,
+		long counter_value, const char *metadata)
+{
+	char str[512];
+	const char *domain = "AmazonMinervaLoggerClient";
+	const char *minerva_wifi_predefined = "30pfp83p:xvb0/2/05330400:100:"
+		"_softwareVersion=;SY,_buildType=;SY,_platform=;SY,_timeZone=;"
+		"SY,_countryOfResidence=;SY,_otaGroupName=;SY,_deviceId=;SY";
+
+	if (metadata == NULL)
+		snprintf(str, 512,
+			"%s,operation=%s;SY,sum=%d;FL,key=%s;SY:",
+			minerva_wifi_predefined, source, counter_value, key);
+	else
+		snprintf(str, 512,
+			"%s,operation=%s;SY,sum=%d;FL,key=%s;SY,%s",
+			minerva_wifi_predefined, source, counter_value, key, metadata);
+	return log_to_metrics(priority, domain, str);
+}
+EXPORT_SYMBOL(minerva_log_counter_to_vitals);
+#endif
+
 VOID notify_fwk_chip_reset(VOID)
 {
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	UINT32 from_host;
+	ENUM_STP_FW_ISSUE_TYPE issue_type;
+	UINT32 from_host = 0;
 	UINT32 drv_type;
+	UINT32 fwIsr, fwRrq, fwTaskId;
 	int ret = -1;
-	INT8 *c_drv_type;
+	UINT32 len = 0;
+	INT8 *c_drv_type = NULL;
+	INT8 *c_sub_type = NULL;
+	UINT8 assert_info[16];
+	UINT8 metadata_str[128];
+	int minerva_ret = -1;
+	UINT8 metadata_str2[128];
 	PUINT8 pDtr = NULL;
 	PUINT8 pbuf = "QA echo assert test from wmtdbg";
-	from_host = g_stp_dbg_cpupcr->host_assert_info.assert_from_host;
+	issue_type = g_stp_dbg_cpupcr->issue_type;
 	drv_type = g_stp_dbg_cpupcr->host_assert_info.drv_type;
+	fwIsr = g_stp_dbg_cpupcr->fwIsr;
+	fwRrq = g_stp_dbg_cpupcr->fwRrq;
+	fwTaskId = g_stp_dbg_cpupcr->fwTaskId;
+
+	osal_memset(&assert_info[0], 0, 16);
+	osal_memset(&metadata_str[0], 0, 128);
+	osal_memset(&metadata_str2[0], 0, 128);
+
+	STP_DBG_PR_INFO("in %s, start\n", __func__);
 
 	pDtr = osal_strstr(&g_stp_dbg_cpupcr->keyword[0], pbuf);
 
 	if (pDtr != NULL)
 		return;
 
-	switch (drv_type) {
-	case WMTDRV_TYPE_BT:
-		c_drv_type = "BT";
-		break;
-	case WMTDRV_TYPE_WIFI:
-		c_drv_type = "WIFI";
-		break;
-	case WMTDRV_TYPE_WMT:
-		c_drv_type = "WMT";
-		break;
-	default:
+	if (issue_type == 0) {
+		STP_DBG_PR_ERR("invalid issue type!\n");
 		return;
 	}
+
+	if ((issue_type == STP_HOST_TRIGGER_FW_ASSERT) ||
+		(issue_type == STP_HOST_TRIGGER_ASSERT_TIMEOUT) ||
+		(issue_type == STP_HOST_TRIGGER_COLLECT_FTRACE) ||
+		issue_type == STP_DBG_PROC_TEST) {
+		from_host = 1;
+		switch (drv_type) {
+		case WMTDRV_TYPE_BT:
+			c_drv_type = "BT";
+			c_sub_type = "DRVBT";
+			break;
+		case WMTDRV_TYPE_WIFI:
+			c_drv_type = "WIFI";
+			c_sub_type = "DRVWIFI";
+			break;
+		case WMTDRV_TYPE_WMT:
+			c_drv_type = "WMT";
+			c_sub_type = "DRVWMT";
+			break;
+		case WMTDRV_TYPE_GPS:
+			c_drv_type = "GPS";
+			c_sub_type = "DRVGPS";
+			break;
+		case WMTDRV_TYPE_FM:
+			c_drv_type = "FM";
+			c_sub_type = "DRVFM";
+			break;
+		default:
+			STP_DBG_PR_ERR("unknow type!\n");
+			return;
+		}
+	} else {
+		from_host = 0;
+		if (issue_type == STP_FW_WARM_RST_ISSUE ||
+			issue_type == STP_FW_ABT) {
+			c_drv_type = "WMT";
+			c_sub_type = (issue_type == STP_FW_ABT) ? "ABT" : "W_RST";
+		} else if (issue_type == STP_FW_ASSERT_ISSUE) {
+			switch (fwTaskId) {
+			case STP_DBG_TASK_WMT:
+				c_drv_type = "WMT";
+				c_sub_type = "WMT";
+				break;
+			case STP_DBG_TASK_IDLE:
+				c_drv_type = "WMT";
+				c_sub_type = "IDLE";
+				break;
+			case STP_DBG_TASK_BT:
+				c_drv_type = "BT";
+				c_sub_type = "BT";
+				break;
+			case STP_DBG_TASK_NATBT:
+				c_drv_type = "BT";
+				c_sub_type = "NATBT";
+				break;
+			case STP_DBG_TASK_BT2:
+				c_drv_type = "BT";
+				c_sub_type = "BT2";
+				break;
+			case STP_DBG_TASK_WIFI:
+				c_drv_type = "WIFI";
+				c_sub_type = "WIFI";
+				break;
+			case STP_DBG_TASK_DRVWIFI:
+				c_drv_type = "WIFI";
+				c_sub_type = "DRVWIFI";
+				break;
+			case STP_DBG_TASK_TST:
+				c_drv_type = "TST";
+				c_sub_type = "TST";
+				break;
+			case STP_DBG_TASK_FM:
+				c_drv_type = "FM";
+				c_sub_type = "FM";
+				break;
+			case STP_DBG_TASK_GPS:
+				c_drv_type = "GPS";
+				c_sub_type = "GPS";
+				break;
+			case STP_DBG_TASK_DRVGPS:
+				c_drv_type = "GPS";
+				c_sub_type = "DRVGPS";
+				break;
+			case STP_DBG_TASK_FLP:
+				c_drv_type = "GPS";
+				c_sub_type = "FLP";
+				break;
+			case STP_DBG_TASK_DRVSTP:
+				c_drv_type = "WMT";
+				c_sub_type = "DRVSTP";
+				break;
+			case STP_DBG_TASK_BUS:
+				c_drv_type = "WMT";
+				c_sub_type = "BUS";
+				break;
+			default:
+				STP_DBG_PR_ERR("invalid fw assert type!\n");
+				return;
+			}
+
+			/*if isr is't null, change sub type*/
+			if (fwIsr != 0) {
+				c_sub_type = "irq";
+				STP_DBG_PR_INFO("irq case rst, num=%d\n", fwRrq);
+			}
+		} else {
+			STP_DBG_PR_ERR("unknow case!\n");
+			return;
+		}
+	}
+
+	len = osal_strlen(&g_stp_dbg_cpupcr->assert_info[0]);
+	if ((len > 0) && (len < STP_ASSERT_INFO_SIZE)) {
+		if (len <=15) {
+			osal_memcpy(&assert_info[0], g_stp_dbg_cpupcr->assert_info, len);
+			assert_info[len -1] = '\0';
+		} else {
+			osal_memcpy(&assert_info[0], &g_stp_dbg_cpupcr->assert_info[len - 15], 15);
+			assert_info[15] = '\0';
+		}
+	} else {
+		osal_memcpy(&assert_info[0], "NULL", osal_strlen("NULL"));
+		assert_info[4] = '\0';
+	}
+
+	sprintf(metadata_str,
+			"!{\"d\"#{\"metadata\"#\"%s\"$\"metadata1\"#\"%s\"$\"metadata2\"#\"%s\"}}",
+			from_host ? "DRV" : "FW", c_sub_type, assert_info);
+
 	ret = log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel vitals", "wifiKDM", "conn-num-chipreset",
-				     c_drv_type, (u32)1, "count", from_host ? "DRV" : "FW", VITALS_NORMAL);
+				     c_drv_type, (u32)1, "count", metadata_str, VITALS_NORMAL);
 	if (ret)
-	       STP_DBG_PR_ERR("log_counter_to_vitals: fails in Key =%s metadata=%s %d\n",c_drv_type, from_host ? "DRV" : "FW", ret);
+	       STP_DBG_PR_ERR("log_counter_to_vitals: fails in Key = %s metadata = %s %d\n",c_drv_type, metadata_str, ret);
+	else
+		STP_DBG_PR_DBG("log_counter_to_vitals: ok in Key = %s, sub_key = %s, metadata = %s\n",
+		c_drv_type, c_sub_type, metadata_str);
+	sprintf(metadata_str2,
+		"metadata=%s;SY:", from_host ? "DRV" : "FW");
+	minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "conn-num-chipreset", c_drv_type, 1, metadata_str2);
+	if (minerva_ret)
+		STP_DBG_PR_ERR("minerva debug: chip reset, metadata_str = %s", metadata_str);
 #endif
 }
 
@@ -2016,7 +2185,7 @@ static _osal_inline_ INT32 stp_dbg_parser_assert_str(PINT8 str, ENUM_ASSERT_INFO
 		osal_memcpy(&tempBuf[0], pDtr, len);
 		tempBuf[len] = '\0';
 
-		if (osal_memcmp(tempBuf, "*", len) == 0)
+		if (osal_memcmp(tempBuf, "*", osal_strlen("*")) == 0)
 			osal_memcpy(&g_stp_dbg_cpupcr->assert_type[0], "general assert",
 					osal_strlen("general assert"));
 		if (osal_memcmp(tempBuf, "Watch Dog Timeout", osal_strlen("Watch Dog Timeout")) == 0)

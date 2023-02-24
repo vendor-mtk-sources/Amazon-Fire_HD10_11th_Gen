@@ -102,9 +102,6 @@ int get_shutdown_cond(void)
 	sdc.shutdown_status.is_uisoc_one_percent,
 	sdc.lowbatteryshutdown, vbat);
 
-	if (sdc.shutdown_status.is_uisoc_one_percent)
-		bat_metrics_critical_shutdown();
-
 	return ret;
 }
 
@@ -325,6 +322,7 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				now, sdd->pre_time[SOC_ZERO_PERCENT]);
 			polling++;
 			if (duraction.tv_sec >= SHUTDOWN_TIME) {
+				bat_metrics_critical_shutdown();
 				bm_err("soc zero shutdown\n");
 				mutex_unlock(&sdd->lock);
 				kernel_power_off();
@@ -346,6 +344,7 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				now, sdd->pre_time[UISOC_ONE_PERCENT]);
 			polling++;
 			if (duraction.tv_sec >= SHUTDOWN_TIME) {
+				bat_metrics_critical_shutdown();
 				bm_err("uisoc one shutdown\n");
 				mutex_unlock(&sdd->lock);
 				kernel_power_off();
@@ -361,6 +360,7 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 		duraction = timespec_sub(now, sdd->pre_time[DLPT_SHUTDOWN]);
 		polling++;
 		if (duraction.tv_sec >= SHUTDOWN_TIME) {
+			bat_metrics_critical_shutdown();
 			bm_err("dlpt shutdown\n");
 			mutex_unlock(&sdd->lock);
 			kernel_power_off();
@@ -420,6 +420,7 @@ static int shutdown_event_handler(struct shutdown_controller *sdd)
 				duraction = timespec_sub(
 					now, sdd->pre_time[LOW_BAT_VOLT]);
 				if (duraction.tv_sec >= SHUTDOWN_TIME) {
+					bat_metrics_critical_shutdown();
 					bm_err("low bat shutdown\n");
 					mutex_unlock(&sdd->lock);
 					kernel_power_off();

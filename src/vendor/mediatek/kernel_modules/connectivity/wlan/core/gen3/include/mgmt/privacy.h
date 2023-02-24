@@ -279,6 +279,10 @@ BOOLEAN secIsProtectedBss(IN P_ADAPTER_T prAdapter, IN P_BSS_INFO_T prBssInfo);
 BOOLEAN tkipMicDecapsulate(IN P_SW_RFB_T prSwRfb, IN PUINT_8 pucMicKey);
 
 UINT_8 secGetBssIdxByNetType(P_ADAPTER_T prAdapter);
+#if CFG_SUPPORT_RSSI_STATISTICS
+void secHandleRxEapolPacket(IN P_ADAPTER_T prAdapter,
+			    IN P_SW_RFB_T prRetSwRfb);
+#endif
 
 /*******************************************************************************
  *                              F U N C T I O N S

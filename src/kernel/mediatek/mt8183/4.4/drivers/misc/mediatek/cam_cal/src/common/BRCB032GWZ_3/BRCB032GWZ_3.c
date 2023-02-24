@@ -68,6 +68,8 @@ static DEFINE_SPINLOCK(g_CAM_CALLock);/* for SMP */
 /*static struct i2c_board_info kd_cam_cal_dev __initdata = { I2C_BOARD_INFO(CAM_CAL_DRVNAME, 0xAA >> 1)};*/
 static struct i2c_client *g_pstI2Cclient;
 
+#define CAM_CAL_MAX_BUF_SIZE 65536/*For Safety, Can Be Adjusted*/
+
 /* add for linux-4.4 */
 #ifndef I2C_WR_FLAG
 #define I2C_WR_FLAG		(0x1000)
@@ -310,9 +312,20 @@ static long CAM_CAL_Ioctl(
 				return -EFAULT;
 			}
 		}
+	} else {
+		CAM_CALDB("[BRCB032GWZ] no data transfer\n");
+		return -EFAULT;
 	}
 
 	ptempbuf = (stCAM_CAL_INFO_STRUCT *)pBuff;
+
+	if ((ptempbuf->u4Length <= 0) ||
+		(ptempbuf->u4Length > CAM_CAL_MAX_BUF_SIZE)) {
+		kfree(pBuff);
+		CAM_CALDB("[BRCB032GWZ] buffer Length Error!\n");
+		return -EFAULT;
+	}
+
 	pWorkingBuff = kmalloc(ptempbuf->u4Length, GFP_KERNEL);
 	if (pWorkingBuff == NULL) {
 		kfree(pBuff);

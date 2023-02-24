@@ -5680,7 +5680,7 @@ int DSI_set_roi(int x, int y)
 int DSI_check_roi(void)
 {
 	int ret = 0;
-	unsigned char read_buf[4] = { 1, 1, 1, 1 };
+	unsigned char read_buf[10] = { 1, 1, 1, 1 };
 	unsigned int data_array[16];
 	int count;
 	int x0;

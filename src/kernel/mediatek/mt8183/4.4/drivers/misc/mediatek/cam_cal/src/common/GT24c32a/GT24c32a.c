@@ -88,7 +88,7 @@ static struct i2c_board_info kd_eeprom_dev __initdata = { I2C_BOARD_INFO("CAM_CA
 /* EEPROM READ/WRITE ID */
 #define S24CS64A_DEVICE_ID							0xAA
 
-
+#define CAM_CAL_MAX_BUF_SIZE 65536/*For Safety, Can Be Adjusted*/
 
 /*******************************************************************************
 *
@@ -451,9 +451,20 @@ static long EEPROM_Ioctl(
 				return -EFAULT;
 			}
 		}
+	} else {
+		EEPROMDB("[GT24c32a] no data transfer\n");
+		return -EFAULT;
 	}
 
 	ptempbuf = (stCAM_CAL_INFO_STRUCT *)pBuff;
+
+	if ((ptempbuf->u4Length <= 0) ||
+		(ptempbuf->u4Length > CAM_CAL_MAX_BUF_SIZE)) {
+		kfree(pBuff);
+		EEPROMDB("[GT24c32a] buffer Length Error!\n");
+		return -EFAULT;
+	}
+
 	pWorkingBuff = kmalloc(ptempbuf->u4Length, GFP_KERNEL);
 	if (pWorkingBuff == NULL) {
 		kfree(pBuff);

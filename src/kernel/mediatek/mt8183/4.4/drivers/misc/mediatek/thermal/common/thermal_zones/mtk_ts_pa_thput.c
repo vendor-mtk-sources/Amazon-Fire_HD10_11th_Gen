@@ -357,6 +357,10 @@ static ssize_t mtk_mdm_proc_timeout_write(struct file *file, const char __user *
 	/* write data to the buffer */
 	if (copy_from_user(desc, buf, len))
 		return -EFAULT;
+	if (len < sizeof(desc))
+		desc[len] = '\0';
+	else
+		desc[sizeof(desc) - 1] = '\0';
 
 	if (kstrtoint(desc, 10, &temp_value) == 0) {
 		signal_period = temp_value;

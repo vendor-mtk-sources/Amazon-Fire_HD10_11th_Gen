@@ -91,7 +91,8 @@ static const struct iw_priv_args rIwPrivTable[] = {
 	{IOCTL_SET_STRUCT, 256, 0, ""},
 	{IOCTL_GET_STRUCT, 0, 256, ""},
 
-	{IOCTL_GET_DRIVER, IW_PRIV_TYPE_CHAR | 2000, IW_PRIV_TYPE_CHAR | 2000, "driver"},
+	{IOCTL_GET_DRIVER, IW_PRIV_TYPE_CHAR | IW_PRIV_BUF_SIZE,
+			IW_PRIV_TYPE_CHAR | IW_PRIV_BUF_SIZE, "driver"},
 
 #if CFG_SUPPORT_QA_TOOL
 	/* added for ATE iwpriv Command */
@@ -170,7 +171,7 @@ static const struct iw_priv_args rIwPrivTable[] = {
 	{PRIV_CMD_GET_BAND_WITH, 0, IW_PRIV_TYPE_CHAR | 2000, "get_bandwidth"},
 #if ENABLED_IN_ENGUSERDEBUG
 	{PRIV_CMD_TRIGGER_CHIP_RESET, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0,
-		"set_chip_reset_ut"},
+		"ut_chip_reset"},
 #endif
 #ifdef ENABLED_IN_ENGUSERDEBUG
 #if CFG_NOTIFY_TX_HANG_METRIC_UT

@@ -165,6 +165,28 @@ typedef enum _ENUM_TESTMODE_STA_STATISTICS_ATTR {
 	NL80211_TESTMODE_STA_STATISTICS_NUM
 } ENUM_TESTMODE_STA_STATISTICS_ATTR;
 
+#if CFG_SUPPORT_RSSI_STATISTICS
+enum nl80211_testmode_rssi_statistics_attr{
+    NL80211_TESTMODE_RSSI_STATISTICS_INVALID = 0,
+    NL80211_TESTMODE_AUTH_RCPI_STATISTICS,
+    NL80211_TESTMODE_AUTH_RETRANMISSION_STATISTICS,
+    NL80211_TESTMODE_ASS_RCPI_STATISTICS,
+    NL80211_TESTMODE_ASS_RETRANMISSION_STATISTICS,
+    NL80211_TESTMODE_EAPOL_RCPI_STATISTICS,
+    NL80211_TESTMODE_EAPOL_RETRANMISSION_STATISTICS,
+    NL80211_TESTMODE_RX_COUNT_STATISTICS,
+    NL80211_TESTMODE_TX_COUNT_STATISTICS,
+    NL80211_TESTMODE_AIS_CONNECTION_STATISTICS,
+    NL80211_TESTMODE_RSSI_STATISTICS_NUM
+};
+
+struct NL80211_DRIVER_GET_RSSI_STATISTICS_PARAMS {
+	NL80211_DRIVER_TEST_MODE_PARAMS hdr;
+	uint32_t u4Version;
+	uint32_t u4Flag;
+};
+#endif
+
 #endif
 /*******************************************************************************
 *                            P U B L I C   D A T A
@@ -328,10 +350,18 @@ int mtk_cfg80211_suspend(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
 
 int mtk_cfg80211_resume(struct wiphy *wiphy);
 
-INT_32 mtk_cfg80211_process_str_cmd(P_GLUE_INFO_T prGlueInfo, PUINT_8 cmd, INT_32 len);
+INT_32 mtk_cfg80211_process_str_cmd(struct wiphy *wiphy, struct wireless_dev *wdev, PUINT_8 cmd, INT_32 len);
 
 int mtk_cfg80211_update_ft_ies(struct wiphy *wiphy, struct net_device *dev,
 		struct cfg80211_update_ft_ies_params *ftie);
+
+#if CFG_SUPPORT_RSSI_STATISTICS
+int
+mtk_cfg80211_testmode_get_rssi_statistics(IN struct wiphy
+		*wiphy, IN void *data, IN int len,
+		IN P_GLUE_INFO_T prGlueInfo);
+
+#endif
 
 /*******************************************************************************
 *                              F U N C T I O N S

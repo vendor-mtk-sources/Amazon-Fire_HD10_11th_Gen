@@ -1,0 +1,64 @@
+/*
+ * Copyright (C) 2020 Amazon Technologies Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * Virtual sensor
+ * select_device: Decide to register which thermal_zone device
+ * 3: register to thermal_zone20
+ */
+
+vs4: vs4 {
+	status = "disabled";
+	compatible = "amazon,vs4", "simple-bus";
+
+	virtual_sensor@3{
+		compatible = "amazon,virtual_sensor-thermal";
+		pinctrl-names = "default", "switch_wpc_ntc", "switch_emmc_ntc";
+		pinctrl-0 = <&switch_pin_default>;
+		pinctrl-1 = <&switch_wpc_ntc>;
+		pinctrl-2 = <&switch_emmc_ntc>;
+		dev_id = <3>;
+		num_trips = <3>;
+		mode = <0>;
+		polling_delay = <0>;
+		governor_name = "virtual_sensor";
+		num_tbps = <3>;
+		temp = <669 1000 1230 60000 60000 60000 60000 60000 60000 60000 60000 60000>;
+		type = <0 0 0 0 0 0 0 0 0 0 0 0>;
+		hyst = <0 0 0 0 0 0 0 0 0 0 0 0>;
+		num_cdevs = <1>;
+		cdev_names = "wpc_bcct1";
+	};
+
+	wpc_bcct@1 {
+		compatible = "amazon,virtual_sensor_cooler";
+		type = "wpc_bcct1";
+		state = <0>;
+		max_state = <12>;
+		level = <10000>;
+		max_level = <15000>;
+		thermal_cooler_id = <4>;
+		levels = <0 0 0 0 0 0 0 0 0 0 0 0>;
+	};
+
+	thermistor3 {
+		compatible = "amazon,virtual_sensor_thermal_sensor";
+		thermal_sensor,offset = <0>;
+		thermal_sensor,offset_invert = <0>;
+		thermal_sensor,alpha = <10>;
+		thermal_sensor,weight = <1000>;
+		thermal_sensor,weight_invert = <0>;
+		thermal_sensor_id = <5>;
+		aux_channel_num = <3>;
+		select_device = <3>;
+	};
+};

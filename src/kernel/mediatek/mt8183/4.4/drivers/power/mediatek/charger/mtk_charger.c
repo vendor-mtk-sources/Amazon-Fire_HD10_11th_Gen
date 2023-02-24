@@ -92,7 +92,7 @@ static struct device *g_dev;
 #define DEFAULT_BAT_EOC_PROTECT_RESET_TIME	60	/* 60s */
 #define DEFAULT_SW_SAFETY_TIMER_RESET_TIME	60	/* 60s */
 
-#define BAT_EOC_PROTECT_OFFSET_VOLTAGE		100	/* 100mV */
+#define DEFAULT_BAT_SOC_EXIT_EOC		96	/* 96% */
 
 #define USE_FG_TIMER 1
 
@@ -1244,7 +1244,6 @@ void mtk_charger_int_handler(void)
 static void reset_bat_eoc_protect_state(struct charger_manager *info)
 {
 	info->bat_eoc_protect = false;
-	info->vbat_eoc = -1;
 }
 
 static void bat_eoc_protect_handle_plug_state(struct charger_manager *info,
@@ -1255,20 +1254,21 @@ static void bat_eoc_protect_handle_plug_state(struct charger_manager *info,
 
 		/* calculate disconnection time */
 		get_monotonic_boottime(&now_time);
-		if (info->disconnect_time.tv_sec > 0 &&
-			timespec_compare(&now_time,
-				&info->disconnect_time) > 0) {
+		if (timespec_compare(&now_time,
+			&info->disconnect_time) > 0) {
 			struct timespec delta_time = timespec_sub(now_time,
 				info->disconnect_time);
 
 			info->disconnect_duration = delta_time.tv_sec;
+		} else {
+			info->disconnect_duration = 0;
 		}
 
 		/* Reset battery EOC protect */
 		if (info->enable_bat_eoc_protect) {
 			if (info->bat_eoc_protect && info->disconnect_duration >=
 				info->bat_eoc_protect_reset_time) {
-				chr_err("%s: Re-enable charging. Disconnect duration %d over %d seconds.\n",
+				chr_err("%s: Re-enable charging. Disconnect duration %ld over %ld seconds.\n",
 					__func__, info->disconnect_duration,
 					info->bat_eoc_protect_reset_time);
 				reset_bat_eoc_protect_state(info);
@@ -1333,16 +1333,16 @@ static int mtk_charger_plug_out(struct charger_manager *info)
 static ssize_t show_custom_plugin_time(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	pr_info("custom plugin_time = %lu\n", pinfo->custom_plugin_time);
-	return scnprintf(buf, PAGE_SIZE, "%lu\n", pinfo->custom_plugin_time);
+	pr_info("custom plugin_time = %ld\n", pinfo->custom_plugin_time);
+	return scnprintf(buf, PAGE_SIZE, "%ld\n", pinfo->custom_plugin_time);
 }
 static ssize_t store_custom_plugin_time(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
 	int ret;
 
-	ret = kstrtoul(buf, 0, &pinfo->custom_plugin_time);
-	pr_info("custom plugin_time = %lu\n", pinfo->custom_plugin_time);
+	ret = kstrtol(buf, 0, &pinfo->custom_plugin_time);
+	pr_info("custom plugin_time = %ld\n", pinfo->custom_plugin_time);
 	if (pinfo->custom_plugin_time > pinfo->top_off_mode_time_threshold)
 		pinfo->custom_plugin_time = pinfo->top_off_mode_time_threshold;
 	return size;
@@ -1392,10 +1392,10 @@ static void check_top_off_mode(struct charger_manager *info,
 	bool reset)
 {
 	struct timespec now_time;
-	unsigned long total_time_plug_in;
+	__kernel_time_t total_time_plug_in;
 
 	if (!reset) {
-		getrawmonotonic(&now_time);
+		get_monotonic_boottime(&now_time);
 		total_time_plug_in =
 			(now_time.tv_sec - info->chr_plug_in_time.tv_sec) + info->custom_plugin_time;
 
@@ -1417,7 +1417,7 @@ static void check_top_off_mode(struct charger_manager *info,
 		}
 	} else if (check_top_off_mode_reset_cond(info)) {
 		chr_err("%s: Reset top-off mode state\n", __func__);
-		getrawmonotonic(&info->chr_plug_in_time);
+		get_monotonic_boottime(&info->chr_plug_in_time);
 		info->custom_plugin_time = 0;
 		info->custom_charging_cv = -1;
 		fg_update_difference_full_cv(info->normal_difference_full_cv);
@@ -1762,9 +1762,13 @@ void mtk_charger_stop_timer(struct charger_manager *info)
 		gtimer_stop(&info->charger_kthread_fgtimer);
 }
 
+#define RECHARGE_SOC_DIFF_FOR_LOW_SOC 2
 static void battery_protect_algo(struct charger_manager *info)
 {
-	int vbat;
+	static int recharge_soc;
+	int ui_soc, soc;
+	int battery_cv;
+	int sw_jeita_cv;
 
 	if (!info->enable_bat_eoc_protect)
 		return;
@@ -1772,7 +1776,22 @@ static void battery_protect_algo(struct charger_manager *info)
 	if (mt_get_charger_type() == CHARGER_UNKNOWN)
 		return;
 
-	vbat = battery_get_bat_voltage();
+	ui_soc = battery_get_uisoc();
+	soc = battery_get_soc();
+#ifdef CONFIG_MTK_USE_AGING_ZCV
+	/* MTK_USE_AGING_ZCV */
+	if (!gm.use_aging_zcv)
+		battery_cv = info->data.battery_cv;
+	else
+		battery_cv = info->data.battery_cv_aging;
+#else
+	battery_cv = info->data.battery_cv;
+#endif
+	if (info->enable_sw_jeita && info->sw_jeita.cv != 0)
+		sw_jeita_cv = info->sw_jeita.cv;
+	else
+		sw_jeita_cv = battery_cv;
+
 	if (!info->bat_eoc_protect) {
 		bool chg_done = false;
 
@@ -1780,34 +1799,38 @@ static void battery_protect_algo(struct charger_manager *info)
 		charger_dev_is_charging_done(info->chg1_dev, &chg_done);
 		if (chg_done) {
 			if (!info->bat_eoc_protect &&
-					(info->custom_charging_cv == -1)) {
+				(ui_soc == 100) &&
+				(info->custom_charging_cv == -1) &&
+				(sw_jeita_cv == battery_cv)) {
+				if (soc >= info->soc_exit_eoc)
+					recharge_soc = info->soc_exit_eoc;
+				else
+					recharge_soc = soc - RECHARGE_SOC_DIFF_FOR_LOW_SOC;
 				chr_err("%s: Enable battery EOC protection\n",
 						__func__);
-				info->vbat_eoc = battery_get_bat_voltage();
 				info->bat_eoc_protect = true;
 			}
 		}
 	} else {
-		/* To check vbat to recover charging state */
-		if (vbat < (info->vbat_eoc -
-			BAT_EOC_PROTECT_OFFSET_VOLTAGE)) {
-			chr_info("%s: Re-enable charging (vbat:%dmV)\n",
-				__func__, vbat);
+		/* To check soc to recover charging state */
+		if (soc < info->soc_exit_eoc || ui_soc < 100) {
+			chr_info("%s: Re-enable charging SOC[%d,%d]\n",
+				__func__, soc, ui_soc);
 			reset_bat_eoc_protect_state(info);
 		}
-		/* Disable if in top-off mode. */
-		if (info->custom_charging_cv > 0) {
+		/* Disable if in top-off & sw jeita lower cv mode. */
+		if (info->custom_charging_cv > 0 || sw_jeita_cv < battery_cv) {
 			chr_info("%s: Reset EOC protection state\n",
 				__func__);
 			reset_bat_eoc_protect_state(info);
 		}
 	}
 
-	chr_err("%s: en[%d] vbat_eoc[%d] vbat[%d] SOC[%d %d] disconnect_duration[%d]\n",
-		__func__,
-		info->bat_eoc_protect,
-		info->vbat_eoc, vbat,
-		battery_get_bat_soc(), battery_get_bat_uisoc(),
+	chr_err("%s: en[%d] SOC[%d,%d,%d] cv[%d %d] vbat[%d] disconnect_duration[%ld]\n",
+		__func__, info->bat_eoc_protect,
+		soc, ui_soc, recharge_soc,
+		battery_cv / 1000, sw_jeita_cv / 1000,
+		battery_get_bat_voltage(),
 		info->disconnect_duration);
 }
 
@@ -1821,6 +1844,7 @@ static void battery_full_track(struct charger_manager *info)
 
 	ui_soc = battery_get_bat_uisoc();
 	charger_dev_is_charging_done(info->chg1_dev, &chg_done);
+	chr_err("%s:%d,%d,%d\n", __func__, chg_done, ui_soc, update_eoc_status);
 	if (chg_done || info->bat_eoc_protect) {
 		if ((update_eoc_status == false) && (ui_soc < 100)) {
 			update_eoc_status = true;
@@ -2044,6 +2068,15 @@ static int mtk_charger_parse_dt(struct charger_manager *info, struct device *dev
 
 	info->enable_bat_eoc_protect = of_property_read_bool(np,
 		"enable_bat_eoc_protect");
+
+	if (of_property_read_u32(np, "soc_exit_eoc", &val) >= 0) {
+		info->soc_exit_eoc = val;
+	} else {
+		chr_err("use default soc_exit_eoc:%d\n",
+			DEFAULT_BAT_SOC_EXIT_EOC);
+		info->soc_exit_eoc =
+			DEFAULT_BAT_SOC_EXIT_EOC;
+	}
 
 	if (of_property_read_u32(np, "bat_eoc_protect_reset_time", &val) >= 0) {
 		info->bat_eoc_protect_reset_time = val;
@@ -2646,7 +2679,7 @@ static int mtk_charger_parse_dt(struct charger_manager *info, struct device *dev
 
 	if (of_property_read_u32(np, "top_off_mode_time_threshold", &val) >= 0) {
 		info->top_off_mode_time_threshold = val;
-		chr_debug("%s: top_off_mode_time_threshold: %d\n",
+		chr_debug("%s: top_off_mode_time_threshold: %ld\n",
 			__func__, info->top_off_mode_time_threshold);
 	} else {
 		chr_err("use default top_off_mode_time_threshold:%d\n",
@@ -3128,7 +3161,7 @@ static ssize_t show_bat_eoc_protect_reset_time(struct device *dev,
 {
 	struct charger_manager *cm = dev->driver_data;
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n",
+	return scnprintf(buf, PAGE_SIZE, "%ld\n",
 		cm->bat_eoc_protect_reset_time);
 }
 
@@ -3165,7 +3198,7 @@ static ssize_t show_top_off_keep_time(struct device *dev,
 {
 	struct charger_manager *cm = dev->driver_data;
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n", cm->top_off_mode_keep_time);
+	return scnprintf(buf, PAGE_SIZE, "%ld\n", cm->top_off_mode_keep_time);
 }
 
 static ssize_t store_top_off_keep_time(struct device *dev,
@@ -3431,8 +3464,8 @@ static int mtk_charger_probe(struct platform_device *pdev)
 	info->custom_plugin_time = 0;
 	info->top_off_mode_enable = 0;
 
-	memset(&info->disconnect_time, 0, sizeof(struct timespec));
-	info->vbat_eoc = -1;
+	info->disconnect_time.tv_sec = 0 - max(info->top_off_mode_keep_time,
+		info->sw_safety_timer_reset_time);
 
 	info->sw_jeita.error_recovery_flag = true;
 	info->sw_jeita.sm = TEMP_T2_TO_T3;

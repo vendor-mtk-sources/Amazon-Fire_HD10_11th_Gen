@@ -54,6 +54,9 @@
 #define	CMD_OID_BUF_LENGTH	4096
 
 #define CMD_GET_WIFI_TYPE	"GET_WIFI_TYPE"
+#define CMD_GET_1XTX_STATUS     "GET_1XTX_STATUS"
+#define CMD_TEST_1XTX_STATUS    "TEST_1XTX_STATUS"
+
 #ifdef ENABLED_IN_ENGUSERDEBUG
 enum UT_TRIGGER_CHIP_RESET trChipReset = TRIGGER_RESET_START;
 #endif
@@ -2853,6 +2856,10 @@ priv_set_driver(IN struct net_device *prNetDev,
 			DBGLOG(REQ, INFO, "%s access_ok Read fail written = %d\n", __func__, i4BytesWritten);
 			return -EFAULT;
 		}
+		if (prIwReqData->data.length >= IW_PRIV_BUF_SIZE) {
+			DBGLOG(REQ, INFO, "Invalid date len: %d\n", prIwReqData->data.length);
+			return -EFAULT;
+		}
 		if (copy_from_user(pcExtra, prIwReqData->data.pointer, prIwReqData->data.length)) {
 			DBGLOG(REQ, INFO,
 			       "%s copy_form_user fail written = %d\n", __func__, prIwReqData->data.length);
@@ -2873,8 +2880,8 @@ priv_set_driver(IN struct net_device *prNetDev,
 
 	if (i4BytesWritten > 0) {
 
-		if (i4BytesWritten > 2000)
-			i4BytesWritten = 2000;
+		if (i4BytesWritten > IW_PRIV_BUF_SIZE)
+			i4BytesWritten = IW_PRIV_BUF_SIZE;
 		prIwReqData->data.length = i4BytesWritten;	/* the iwpriv will use the length */
 
 	} else if (i4BytesWritten == 0) {
@@ -4476,10 +4483,18 @@ static int priv_driver_fw_active_time_statistics(IN struct net_device *prNetDev,
 				"TimeDuringScreenOn[%u] TimeDuringScreenOff[%u] ",
 				g_FwActiveTime.u4TimeDuringScreenOn,
 				g_FwActiveTime.u4TimeDuringScreenOff);
+			if (i4BytesWritten < 0 || i4BytesWritten >= i4TotalLen) {
+				DBGLOG(REQ, ERROR, "snprintf TimeD error %d\n", i4BytesWritten);
+				return -1;
+			}
 			i4BytesWritten += snprintf(pcCommand + i4BytesWritten, i4TotalLen - i4BytesWritten,
 				"HwTimeDuringScreenOn[%u] HwTimeDuringScreenOff[%u]\n",
 				g_FwActiveTime.u4HwTimeDuringScreenOn,
 				g_FwActiveTime.u4HwTimeDuringScreenOff);
+			if (i4BytesWritten < 0 || i4BytesWritten >= i4TotalLen) {
+				DBGLOG(REQ, ERROR, "snprintf HwTimeD error %d\n", i4BytesWritten);
+				return -1;
+			}
 			return i4BytesWritten;
 
 		} else {
@@ -4495,6 +4510,88 @@ static int priv_driver_fw_active_time_statistics(IN struct net_device *prNetDev,
 }
 
 #endif
+
+static int priv_driver_get_1xtx_status(IN struct net_device *prNetDev,
+	IN char *pcCommand, IN int i4TotalLen)
+{
+	P_GLUE_INFO_T prGlueInfo = NULL;
+	INT_32  i4BytesWritten = 0;
+	UINT_32 u4BufLen = 0;
+	WLAN_STATUS rStatus = WLAN_STATUS_SUCCESS;
+	ENUM_TX_RESULT_CODE_T rM2TxDoneStatus;
+
+	if (!pcCommand)
+		return -EFAULT;
+	DBGLOG(REQ, LOUD, "command is %s\n", pcCommand);
+
+	prGlueInfo = *((struct _GLUE_INFO_T **) netdev_priv(prNetDev));
+	if (!prGlueInfo)
+		return -EFAULT;
+
+	rStatus = kalIoctl(prGlueInfo, wlanoidQueryR1xTxDoneStatus,
+			   &rM2TxDoneStatus, sizeof(rM2TxDoneStatus),
+			   TRUE, FALSE, TRUE,
+			   &u4BufLen);
+	if (rStatus != WLAN_STATUS_SUCCESS) {
+		DBGLOG(REQ, WARN, "fail to get r1xtxDoneStatus\n");
+		return -1;
+	}
+
+	i4BytesWritten = kalSnprintf(pcCommand, i4TotalLen, "r1xTxDoneStatus is %d\n", rM2TxDoneStatus);
+
+	return i4BytesWritten;
+}
+static int priv_driver_test_1xtx_status(IN struct net_device *prNetDev,
+	IN char *pcCommand, IN int i4TotalLen)
+{
+	P_GLUE_INFO_T prGlueInfo = NULL;
+	P_ADAPTER_T prAdapter = NULL;
+	INT_32 i4BytesWritten = 0;
+	INT_32 i4Argc = 0;
+	UINT_8 *apcArgv[WLAN_CFG_ARGV_MAX] = { 0 };
+	INT_32 i4Ret = 0;
+	UINT_8 ucTest1xTxStatus;
+	UINT_32 u4BufLen = 0;
+	WLAN_STATUS rStatus = WLAN_STATUS_SUCCESS;
+	UINT_8 fgIsTest1xTx;
+
+	prGlueInfo = *((struct _GLUE_INFO_T **) netdev_priv(prNetDev));
+	if (!prGlueInfo)
+		return -EFAULT;
+
+	if (!pcCommand)
+		return -EFAULT;
+
+	DBGLOG(REQ, LOUD, "command is %s\n", pcCommand);
+	wlanCfgParseArgument(pcCommand, &i4Argc, apcArgv);
+	DBGLOG(REQ, LOUD, "i4Argc is %d\n", i4Argc);
+
+	if (i4Argc != 2) {
+		i4BytesWritten += scnprintf(pcCommand + i4BytesWritten,
+			i4TotalLen - i4BytesWritten,
+			"\nformat:test_1xtx_status [0|1]");
+		return i4BytesWritten;
+	}
+
+	i4Ret = kstrtou8(apcArgv[1], 0, &ucTest1xTxStatus);
+	if (i4Ret) {
+		DBGLOG(REQ, ERROR, "parse test_1xtx_status error i4Ret=%d\n", i4Ret);
+		return -EFAULT;
+	}
+
+	fgIsTest1xTx = ucTest1xTxStatus;
+	rStatus = kalIoctl(prGlueInfo, wlanoidSetR1xTxDoneStatus,
+			   &fgIsTest1xTx, sizeof(fgIsTest1xTx),
+			   TRUE, FALSE, TRUE,
+			   &u4BufLen);
+	if (rStatus != WLAN_STATUS_SUCCESS) {
+		DBGLOG(REQ, WARN, "fail to set r1xtxDoneStatus\n");
+		return -1;
+	}
+
+	return i4BytesWritten;
+}
+
 
 static int priv_driver_wifi_on_time_statistics(IN struct net_device *prNetDev, IN PCHAR pcCommand,
 	IN int i4TotalLen)
@@ -4529,6 +4626,10 @@ static int priv_driver_wifi_on_time_statistics(IN struct net_device *prNetDev, I
 				"TimeDuringScreenOn[%u] TimeDuringScreenOff[%u] ",
 				wifiOnTimeStatistics.u4WifiOnTimeDuringScreenOn,
 				wifiOnTimeStatistics.u4WifiOnTimeDuringScreenOff);
+			if (i4BytesWritten < 0 || i4BytesWritten >= i4TotalLen) {
+				DBGLOG(REQ, ERROR, "snprintf error %d\n", i4BytesWritten);
+				return -1;
+			}
 			return i4BytesWritten;
 
 		} else {
@@ -4561,6 +4662,8 @@ struct PRIV_CMD_HANDLER {
 
 struct PRIV_CMD_HANDLER priv_cmd_handlers[] = {
 	{CMD_GET_WIFI_TYPE, priv_driver_get_wifi_type},
+	{CMD_GET_1XTX_STATUS, priv_driver_get_1xtx_status},
+	{CMD_TEST_1XTX_STATUS, priv_driver_test_1xtx_status},
 };
 
 INT_32 priv_driver_cmds(IN struct net_device *prNetDev, IN PCHAR pcCommand, IN INT_32 i4TotalLen)

@@ -139,7 +139,10 @@ static ssize_t _cl_cam_write(struct file *filp, const char __user *buf, size_t l
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &_cl_cam);
 	if (ret)
 		WARN_ON_ONCE(1);
@@ -224,7 +227,10 @@ static ssize_t _cl_cam_status_write(struct file *filp, const char __user *buf, s
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &_cl_cam_status);
 	if (ret)
 		WARN_ON_ONCE(1);

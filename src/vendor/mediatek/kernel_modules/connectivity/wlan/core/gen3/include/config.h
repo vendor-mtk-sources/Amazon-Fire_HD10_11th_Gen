@@ -107,9 +107,11 @@
 #if (CFG_SUPPORT_DFS == 1)	/* Add by Enlai */
 #define CFG_SUPPORT_QUIET           0	/* Quiet (802.11h) */
 #define CFG_SUPPORT_SPEC_MGMT       1	/* Spectrum Management (802.11h): TPC and DFS */
+#define CFG_SUPPORT_PWR_CAPIE       1
 #else
 #define CFG_SUPPORT_QUIET           0	/* Quiet (802.11h) */
 #define CFG_SUPPORT_SPEC_MGMT       0	/* Spectrum Management (802.11h): TPC and DFS */
+#define CFG_SUPPORT_PWR_CAPIE       0
 #endif
 
 #define CFG_SUPPORT_RX_RDG          0	/* 11n feature. RX RDG capability */
@@ -118,13 +120,13 @@
 #define CFG_SUPPORT_RX_SGI          1	/* 802.11n RX short GI for both 20M and 40M BW */
 #define CFG_SUPPORT_RX_HT_GF        1	/* 802.11n RX HT green-field capability */
 #define CFG_SUPPORT_BFEE            1
-#define CFG_SUPPORT_WAPI            1
+#define CFG_SUPPORT_WAPI            0
 #define CFG_SUPPORT_FCC_DYNAMIC_TX_PWR_ADJUST	0  /* Support FCC/CE Dynamic Tx Power Adjust */
 #define AMZN_PWR_TABLE_ENABLE 1 /*amazon specified power table setup enable flag*/
 #define CFG_CUSTOM_REG        1
 
 /* Enable QA Tool Support */
-#define CFG_SUPPORT_QA_TOOL			1
+#define CFG_SUPPORT_QA_TOOL			0
 
 /* Enable TX BF Support */
 #define CFG_SUPPORT_TX_BF			1
@@ -744,7 +746,7 @@
 #define CFG_SUPPORT_P2P_RSSI_QUERY        0
 
 #define CFG_SHOW_MACADDR_SOURCE     1
-#define CFG_SUPPORT_VO_ENTERPRISE               0
+
 #define CFG_SUPPORT_WMM_AC                      1
 #if CFG_SUPPORT_VO_ENTERPRISE
 #define CFG_SUPPORT_802_11V_BSS_TRANSITION_MGT  1
@@ -972,6 +974,7 @@ enum UT_TRIGGER_CHIP_RESET {
 #define CFG_NOTIFY_TX_HANG_METRIC_UT	0/*fos_change*/
 #endif
 
+#define CFG_SUPPORT_RSSI_STATISTICS         1
 
 /*******************************************************************************
 *                             D A T A   T Y P E S

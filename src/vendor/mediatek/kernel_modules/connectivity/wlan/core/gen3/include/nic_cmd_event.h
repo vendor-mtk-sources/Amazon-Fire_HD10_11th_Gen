@@ -435,6 +435,10 @@ typedef enum _ENUM_CMD_ID_T {
 	CMD_ID_CHIP_CONFIG = 0xCA,	/* 0xca (Set / Query) */
 	CMD_ID_STATS_LOG = 0xCB,	/* 0xcb (Set) */
 	CMD_ID_SET_RDD_CH = 0xE1,
+#if CFG_SUPPORT_RSSI_STATISTICS
+	CMD_ID_GET_RX_COUNT =0xE9,
+#endif
+
 #if CFG_SUPPORT_QA_TOOL
 	CMD_ID_LAYER_0_EXT_MAGIC_NUM = 0xED,	/* magic number for Extending MT6630 original CMD header */
 #endif /* CFG_SUPPORT_QA_TOOL */
@@ -539,6 +543,10 @@ typedef enum _ENUM_EVENT_ID_T {
 	EVENT_ID_WIFI_LOG_LEVEL  = 0x8D,
 	EVENT_ID_UPDATE_FW_INFO = 0x90, /* 0x90 (Unsolicited) */
 	EVENT_ID_RSSI_MONITOR = 0xA1,
+#if CFG_SUPPORT_RSSI_STATISTICS
+	EVENT_ID_GET_RX_COUINT = 0xE9,
+#endif
+
 
 	EVENT_ID_BUILD_DATE_CODE = 0xF8,
 	EVENT_ID_GET_AIS_BSS_INFO = 0xF9,
@@ -552,6 +560,7 @@ typedef enum _ENUM_EVENT_ID_T {
 } ENUM_EVENT_ID_T, *P_ENUM_EVENT_ID_T;
 enum ENUM_SCN_FUNC_MASK {
 	ENUM_SCN_RANDOM_MAC_EN = (1 << 0),
+	ENUM_SCN_ANTSWITCH_EN = (1 << 1),
 };
 
 #define CMD_ID_SET_PSCN_ADD_HOTLIST_BSSID CMD_ID_SET_GSCAN_ADD_HOTLIST_BSSID	/* 0x45 (Set) */
@@ -2415,6 +2424,13 @@ struct EVENT_FW_BEACONTIMEOUT_CNT_STATISTICS {
 };
 #endif
 
+#if CFG_SUPPORT_RSSI_STATISTICS
+struct EVENT_RX_INFO {
+	UINT_8 ucBssIndex;
+	UINT_32 u4RxPktNum;
+};
+#endif
+
 /*******************************************************************************
 *                            P U B L I C   D A T A
 ********************************************************************************
@@ -2550,6 +2566,12 @@ void nicCmdEventGetFwActiveTimeStatistics(IN P_ADAPTER_T prAdapter,
 void nicCmdEventGetBeacontimeCntStatistics(IN P_ADAPTER_T prAdapter,
 	IN P_CMD_INFO_T prCmdInfo,
 	IN PUINT_8 pucEventBuf);
+#endif
+
+#if CFG_SUPPORT_RSSI_STATISTICS
+void nicCmdEventRecordTxRxCount(IN P_ADAPTER_T prAdapter,
+	IN P_CMD_INFO_T prCmdInfo, IN PUINT_8 pucEventBuf);
+
 #endif
 
 /*******************************************************************************

@@ -540,6 +540,30 @@ typedef struct _NET_INTERFACE_INFO_T {
 	PVOID pvNetInterface;
 } NET_INTERFACE_INFO_T, *P_NET_INTERFACE_INFO_T;
 
+#if CFG_SUPPORT_RSSI_STATISTICS
+struct WIFI_RX_RSSI_STATISTICS {
+	UINT_8 ucAuthRcpi;
+	UINT_8 ucAuthRetransmission;
+	UINT_8 ucAssocRcpi;
+	UINT_8 ucAssocRetransmission;
+	UINT_8 ucM1Rcpi;
+	UINT_8 ucM1Retransmission;
+};
+
+struct PARAM_GET_RSSI_STATISTICS {
+	struct WIFI_RX_RSSI_STATISTICS arRxRssiStatistics;
+	UINT_32 u4RxPktNum;
+	UINT_8 ucAisConnectionStatus;
+};
+
+struct PARAM_RX_COUNT {
+	UINT_8	ucBssIndex;
+	UINT_32	u4RxPktNum;
+};
+#endif
+
+
+
 #if 0
 typedef struct _SEC_FRAME_INFO_T {
 	BOOLEAN fgIsProtected;
@@ -562,6 +586,8 @@ typedef enum _ENUM_TX_RESULT_CODE_T {
 	TX_RESULT_DROPPED_IN_DRIVER = 32,
 	TX_RESULT_DROPPED_IN_FW,
 	TX_RESULT_QUEUE_CLEARANCE,
+	TX_RESULT_UNINITIALIZED = 48, // driver only
+	TX_RESULT_1XTX_CLEAR, // driver only
 	TX_RESULT_NUM
 } ENUM_TX_RESULT_CODE_T, *P_ENUM_TX_RESULT_CODE_T;
 
@@ -976,6 +1002,8 @@ VOID wlanTxProfilingTagMsdu(IN P_ADAPTER_T prAdapter, IN P_MSDU_INFO_T prMsduInf
 VOID wlanTxLifetimeTagPacketQue(IN P_ADAPTER_T prAdapter, IN P_MSDU_INFO_T prMsduInfoListHead,
 		IN ENUM_TX_PROFILING_TAG_T eTag);
 
+uint8_t wlanGetBssIdx(struct net_device *ndev);
+
 /*----------------------------------------------------------------------------*/
 /* update per-AC statistics for LLS                */
 /*----------------------------------------------------------------------------*/
@@ -1015,5 +1043,9 @@ int wlanSuspendRekeyOffload(P_GLUE_INFO_T prGlueInfo, IN UINT_8 ucRekeyDisable);
 VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid);
 #endif
 #endif
+
+#if CFG_SUPPORT_RSSI_STATISTICS
+void wlanGetTxRxCount(IN P_ADAPTER_T prAdapter, uint8_t ucBssIndex);
+#endif /* CFG_SUPPORT_DATA_STALL */
 
 #endif /* _WLAN_LIB_H */

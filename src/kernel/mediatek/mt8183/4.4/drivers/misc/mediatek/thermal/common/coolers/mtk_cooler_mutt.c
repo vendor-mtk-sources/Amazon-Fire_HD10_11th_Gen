@@ -205,7 +205,10 @@ static ssize_t clmutt_tmd_pid_write(struct file *filp, const char __user *buf, s
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &tmd_input_pid);
 	if (ret)
 		WARN_ON_ONCE(1);
@@ -309,6 +312,10 @@ static ssize_t clmutt_tm_pid_write(struct file *filp, const char __user *buf, si
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
 
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &tm_input_pid);
 	if (ret)
 		WARN_ON_ONCE(1);

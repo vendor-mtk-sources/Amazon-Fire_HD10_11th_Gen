@@ -373,7 +373,10 @@ static ssize_t clmutt_fg_pid_write(struct file *filp, const char __user *buf, si
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &fg_app_pid);
 	if (ret)
 		WARN_ON(1);

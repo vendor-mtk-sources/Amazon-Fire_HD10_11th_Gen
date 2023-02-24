@@ -1227,7 +1227,10 @@ ssize_t wmt_tm_wfd_write(struct file *filp, const char __user *buf, size_t len, 
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtoint(tmp, 10, &tm_wfd_stat);
 
 #if 0
@@ -1335,7 +1338,10 @@ ssize_t wmt_tm_pid_write(struct file *filp, const char __user *buf, size_t len, 
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	ret = kstrtouint(tmp, 10, &tm_input_pid);
 	if (ret)
 		WARN_ON_ONCE(1);

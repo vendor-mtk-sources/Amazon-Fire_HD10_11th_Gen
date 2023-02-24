@@ -293,7 +293,10 @@ static ssize_t clvpu_opp_proc_write(struct file *filp, const char __user *buf, s
 	/* write data to the buffer */
 	if (copy_from_user(tmp, buf, len))
 		return -EFAULT;
-
+	if (len < sizeof(tmp))
+		tmp[len] = '\0';
+	else
+		tmp[sizeof(tmp) - 1] = '\0';
 	if (kstrtoint(tmp, 10, &vpu_upper_opp) == 0) {
 #if defined(CONFIG_MTK_VPU_SUPPORT)
 		if (vpu_upper_opp == -1)

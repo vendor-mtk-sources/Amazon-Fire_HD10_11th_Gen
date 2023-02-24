@@ -39,13 +39,18 @@ enum kbase_instr_state {
 	KBASE_INSTR_STATE_DUMPING,
 	/* We've requested a clean to occur on a workqueue */
 	KBASE_INSTR_STATE_REQUEST_CLEAN,
+
 	/* Hardware is currently cleaning and invalidating caches. */
 	KBASE_INSTR_STATE_CLEANING,
 	/* Cache clean completed, and either a) a dump is complete, or
 	 * b) instrumentation can now be setup. */
 	KBASE_INSTR_STATE_CLEANED,
 	/* An error has occured during DUMPING (page fault). */
-	KBASE_INSTR_STATE_FAULT
+	KBASE_INSTR_STATE_FAULT,
+	/* An unrecoverable error has occurred, a reset is the only way to exit
+	 * from unrecoverable error state.
+	 */
+	KBASE_INSTR_STATE_UNRECOVERABLE_ERROR
 };
 
 /* Structure used for instrumentation and HW counters dumping */

@@ -9788,18 +9788,40 @@ wlanoidSetCountryCode(IN P_ADAPTER_T prAdapter,
 	pucCountry = pvSetBuffer;
 
 	u2Country = (((UINT_16) pucCountry[0]) << 8) | ((UINT_16) pucCountry[1]);
-	if ((u2Country != COUNTRY_CODE_US) &&
-			(u2Country != COUNTRY_CODE_JP) &&
-			(u2Country != COUNTRY_CODE_DE) &&
-			(u2Country != COUNTRY_CODE_FR) &&
-			(u2Country != COUNTRY_CODE_IT) &&
-			(u2Country != COUNTRY_CODE_GB) &&
-			(u2Country != COUNTRY_CODE_ES) &&
+
+	UINT_16 *non_WW_countries;
+	UINT_16 non_WW_countries_default[] = {
+		COUNTRY_CODE_US, COUNTRY_CODE_JP, COUNTRY_CODE_DE, COUNTRY_CODE_FR, COUNTRY_CODE_IT,
+		COUNTRY_CODE_GB, COUNTRY_CODE_ES,
 #if CFG_SUPPORT_DFS_CHANNEL /* fos_change oneline */
-			(u2Country != COUNTRY_CODE_EU) &&
+		COUNTRY_CODE_EU,
 #endif /* fos_change oneline */
-			(u2Country != COUNTRY_CODE_CA))
-		u2Country = COUNTRY_CODE_WW;
+		COUNTRY_CODE_CA, COUNTRY_CODE_NULL
+	};
+
+	UINT_16 non_WW_countries_abx123[] = {
+		COUNTRY_CODE_EU, COUNTRY_CODE_GB, COUNTRY_CODE_BR, COUNTRY_CODE_ZA, COUNTRY_CODE_HK,
+		COUNTRY_CODE_SG, COUNTRY_CODE_US, COUNTRY_CODE_AU, COUNTRY_CODE_NZ, COUNTRY_CODE_IN,
+		COUNTRY_CODE_CA, COUNTRY_CODE_JP, COUNTRY_CODE_AT, COUNTRY_CODE_BE, COUNTRY_CODE_BG,
+		COUNTRY_CODE_CR, COUNTRY_CODE_CZ, COUNTRY_CODE_DK, COUNTRY_CODE_FI, COUNTRY_CODE_FR,
+		COUNTRY_CODE_DE, COUNTRY_CODE_IT, COUNTRY_CODE_IE, COUNTRY_CODE_LU, COUNTRY_CODE_NL,
+		COUNTRY_CODE_PH, COUNTRY_CODE_PL, COUNTRY_CODE_PT, COUNTRY_CODE_RO, COUNTRY_CODE_SK,
+		COUNTRY_CODE_ES, COUNTRY_CODE_SE, COUNTRY_CODE_CH, COUNTRY_CODE_TR, COUNTRY_CODE_MX,
+		COUNTRY_CODE_CN, COUNTRY_CODE_NULL
+	};
+
+	if(g_board_type == DEV_TYPE_ID_abx123) {
+		non_WW_countries = &non_WW_countries_abx123[0];
+	} else {
+		non_WW_countries = &non_WW_countries_default[0];
+	}
+	while (*non_WW_countries != u2Country) {
+		if (*non_WW_countries == COUNTRY_CODE_NULL) {
+			u2Country = COUNTRY_CODE_WW;
+			break;
+		}
+		non_WW_countries++;
+	}
 
 	if (!rlmIsValidCountryCode(u2Country))
 		return WLAN_STATUS_INVALID_DATA;
@@ -11876,9 +11898,18 @@ wlanoidUpdateFtIes(P_ADAPTER_T prAdapter, PVOID pvSetBuffer, UINT_32 u4SetBuffer
 		DBGLOG(OID, ERROR, "pvSetBuffer is Null %d, Buffer Len %u\n", !pvSetBuffer, u4SetBufferLen);
 		return WLAN_STATUS_INVALID_DATA;
 	}
+
+	if(kalGetMediaStateIndicated(prAdapter->prGlueInfo) == PARAM_MEDIA_STATE_DISCONNECTED) {
+		DBGLOG(OID, WARN, "PARAM_MEDIA_STATE_DISCONNECTED,ignore the FT Ies update\n");
+		return WLAN_STATUS_SUCCESS;
+	}
+
 	prStaRec = prAdapter->rWifiVar.rAisFsmInfo.prTargetStaRec;
 	ftie = (struct cfg80211_update_ft_ies_params *)pvSetBuffer;
-	prFtIes = &prAdapter->prGlueInfo->rFtIeForTx;
+	if (prAdapter->prGlueInfo->fgIsFtAuth)
+		prFtIes = &prAdapter->prGlueInfo->rFtIeForAuthTx;
+	else
+		prFtIes = &prAdapter->prGlueInfo->rFtIeForAssocTx;
 	if (ftie->ie_len == 0) {
 		DBGLOG(OID, WARN, "FT Ies length is 0\n");
 		return WLAN_STATUS_SUCCESS;
@@ -12009,6 +12040,7 @@ wlanoidSendBTMQuery(P_ADAPTER_T prAdapter, PVOID pvSetBuffer, UINT_32 u4SetBuffe
 {
 	P_STA_RECORD_T prStaRec = NULL;
 	struct BSS_TRANSITION_MGT_PARAM_T *prBtmMgt = NULL;
+	int32_t u4Ret = 0;
 
 	if (!prAdapter->prAisBssInfo || prAdapter->prAisBssInfo->eConnectionState !=
 		PARAM_MEDIA_STATE_CONNECTED) {
@@ -12022,7 +12054,15 @@ wlanoidSendBTMQuery(P_ADAPTER_T prAdapter, PVOID pvSetBuffer, UINT_32 u4SetBuffe
 	}
 	prBtmMgt = &prAdapter->rWifiVar.rAisSpecificBssInfo.rBTMParam;
 	prBtmMgt->ucDialogToken = wnmGetBtmToken();
-	prBtmMgt->ucQueryReason = pvSetBuffer ? (*(PUINT_8)pvSetBuffer - '0'):BSS_TRANSITION_LOW_RSSI;
+
+	if (pvSetBuffer) {
+		u4Ret = kstrtou8(pvSetBuffer, 0, &prBtmMgt->ucQueryReason);
+		if (u4Ret)
+			DBGLOG(OID, WARN, "parse reason u4Ret=%d\n", u4Ret);
+	} else {
+		prBtmMgt->ucQueryReason = BSS_TRANSITION_LOW_RSSI;
+	}
+
 	DBGLOG(OID, INFO, "Send BssTransitionManagementQuery, Reason %d\n", prBtmMgt->ucQueryReason);
 	wnmSendBTMQueryFrame(prAdapter, prStaRec);
 	return WLAN_STATUS_SUCCESS;
@@ -13447,4 +13487,117 @@ wlanoidGetFwBeacontimeoutCntStatistics(IN P_ADAPTER_T prAdapter,
 	return rWlanStatus;
 
 }
+#endif
+
+WLAN_STATUS
+wlanoidQueryR1xTxDoneStatus(IN P_ADAPTER_T prAdapter,
+			  IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen)
+{
+	WLAN_STATUS rResult = WLAN_STATUS_SUCCESS;
+
+	do {
+		ASSERT(pvQueryBuffer);
+
+		/* Sanity test */
+		if (!prAdapter || !pu4QueryInfoLen)
+			break;
+
+		if ((u4QueryBufferLen) && !pvQueryBuffer)
+			break;
+
+		/* Check for query buffer length */
+		if (u4QueryBufferLen < *pu4QueryInfoLen) {
+			DBGLOG(OID, WARN, "Too short length %u\n", u4QueryBufferLen);
+			return WLAN_STATUS_BUFFER_TOO_SHORT;
+		}
+
+		*(P_ENUM_TX_RESULT_CODE_T)pvQueryBuffer = prAdapter->r1xTxDoneStatus;
+	} while (FALSE);
+	return rResult;
+}
+
+WLAN_STATUS
+wlanoidSetR1xTxDoneStatus(IN P_ADAPTER_T prAdapter,
+			  IN PVOID pvSetBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen)
+{
+	WLAN_STATUS rResult = WLAN_STATUS_SUCCESS;
+
+	do {
+		ASSERT(pvSetBuffer);
+
+		/* Sanity test */
+		if (!prAdapter || !pu4QueryInfoLen)
+			break;
+
+		if ((u4QueryBufferLen) && !pvSetBuffer)
+			break;
+
+		/* Check for query buffer length */
+		if (u4QueryBufferLen < *pu4QueryInfoLen) {
+			DBGLOG(OID, WARN, "Too short length %u\n", u4QueryBufferLen);
+			return WLAN_STATUS_BUFFER_TOO_SHORT;
+		}
+		prAdapter->fgIsTest1xTx = *(PUINT_8) pvSetBuffer;
+		DBGLOG(OID, WARN, "r1xTxDoneStatus %u\n", prAdapter->fgIsTest1xTx);
+	} while (FALSE);
+	return rResult;
+}
+
+#if CFG_SUPPORT_RSSI_STATISTICS
+uint32_t
+wlanoidQueryRssiStatistics(IN P_ADAPTER_T prAdapter,
+		 OUT PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen,
+		 OUT PUINT_32 pu4QueryInfoLen)
+{
+	uint32_t rStatus = WLAN_STATUS_SUCCESS;
+	struct PARAM_GET_RSSI_STATISTICS *prQueryRssiStatistics;
+
+	DEBUGFUNC("wlanoidQueryRssiStatistics");
+
+	ASSERT(prAdapter);
+	do {
+
+		/* 4 1. Sanity test */
+		if (pu4QueryInfoLen == NULL ||
+			((u4QueryBufferLen) && (pvQueryBuffer == NULL))) {
+			rStatus = WLAN_STATUS_FAILURE;
+			break;
+		}
+
+		if (u4QueryBufferLen <
+		    sizeof(struct PARAM_GET_RSSI_STATISTICS)) {
+			*pu4QueryInfoLen =
+					sizeof(struct PARAM_GET_RSSI_STATISTICS);
+			rStatus = WLAN_STATUS_BUFFER_TOO_SHORT;
+			break;
+		}
+
+		prQueryRssiStatistics = (struct PARAM_GET_RSSI_STATISTICS *)
+				       pvQueryBuffer;
+
+		prQueryRssiStatistics->arRxRssiStatistics.ucAuthRcpi = prAdapter->arRxRssiStatistics.ucAuthRcpi;
+		prQueryRssiStatistics->arRxRssiStatistics.ucAuthRetransmission = prAdapter->arRxRssiStatistics.ucAuthRetransmission;
+		prQueryRssiStatistics->arRxRssiStatistics.ucAssocRcpi = prAdapter->arRxRssiStatistics.ucAssocRcpi;
+		prQueryRssiStatistics->arRxRssiStatistics.ucAssocRetransmission = prAdapter->arRxRssiStatistics.ucAssocRetransmission;
+		prQueryRssiStatistics->arRxRssiStatistics.ucM1Rcpi = prAdapter->arRxRssiStatistics.ucM1Rcpi;
+		prQueryRssiStatistics->arRxRssiStatistics.ucM1Retransmission = prAdapter->arRxRssiStatistics.ucM1Retransmission;
+		prQueryRssiStatistics->ucAisConnectionStatus = prAdapter->ucAisConnectionStatus;
+		prQueryRssiStatistics->u4RxPktNum = prAdapter->u4RxPktNum;
+
+
+		DBGLOG(REQ, TRACE, "dump rssi statistics info  [%d,%d],[%d,%d],[%d,%d],[%d,%d]\n",
+			prQueryRssiStatistics->arRxRssiStatistics.ucAuthRcpi,
+			prQueryRssiStatistics->arRxRssiStatistics.ucAuthRetransmission,
+			prQueryRssiStatistics->arRxRssiStatistics.ucAssocRcpi,
+			prQueryRssiStatistics->arRxRssiStatistics.ucAssocRetransmission,
+			prQueryRssiStatistics->arRxRssiStatistics.ucAssocRcpi,
+			prQueryRssiStatistics->arRxRssiStatistics.ucM1Retransmission,
+			prQueryRssiStatistics->ucAisConnectionStatus,
+			prQueryRssiStatistics->u4RxPktNum);
+
+		if (rStatus != WLAN_STATUS_SUCCESS && rStatus != WLAN_STATUS_PENDING)
+			DBGLOG(REQ, ERROR, "Failed with status %d\n", rStatus);
+	}while (FALSE);
+	return rStatus;
+} /* end of wlanoidQueryRssi() */
 #endif

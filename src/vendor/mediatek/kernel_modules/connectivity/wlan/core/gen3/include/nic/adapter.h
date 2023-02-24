@@ -427,6 +427,9 @@ struct _BSS_INFO_T {
 	UINT_8 ucKeyCmdAction; /* 0: will queue add key command, 1: send add key command, 2: drop command */
 	BOOLEAN fgUnencryptedEapol;
 	UINT_32 u4CoexPhyRateLimit;
+#if CFG_SUPPORT_DFS
+	TIMER_T rCsaTimer;
+#endif
 };
 
 struct ESS_CHNL_INFO {
@@ -1115,6 +1118,14 @@ struct _ADAPTER_T {
 	int total_scandone_timeout_count;
 	int total_mgmtTX_timeout_count;
 	int total_mgmtRX_timeout_count;
+#endif
+	ENUM_TX_RESULT_CODE_T r1xTxDoneStatus;
+	UINT_8 fgIsTest1xTx;
+#if CFG_SUPPORT_RSSI_STATISTICS
+	struct WIFI_RX_RSSI_STATISTICS arRxRssiStatistics;
+	UINT_32 u4RxTotalPktNum;
+	UINT_32 u4RxPktNum;
+	UINT_8 ucAisConnectionStatus;
 #endif
 };				/* end of _ADAPTER_T */
 

@@ -46,6 +46,7 @@ static unsigned int bl_div = CLK_DIV1;
 #define PWM_DIV_NUM 8
 static unsigned int div_array[PWM_DIV_NUM];
 struct mt65xx_led_data *g_leds_data[MT65XX_LED_TYPE_TOTAL];
+#define BRIGHTNESS_MAX_LIMIT 255
 
 #ifdef CONFIG_BACKLIGHT_SUPPORT_LP8557
 static unsigned int last_level1 = 102;
@@ -118,7 +119,9 @@ int setMaxbrightness(int max_level, int enable)
 {
 	struct cust_mt65xx_led *cust_led_list = mt_get_cust_led_list();
 
-	pr_info("%s: max=%d enable=%d limit=%d\n", __FUNCTION__, max_level, enable, limit);
+	/* update enable variable value here because it didn't maintain from caller */
+	enable = (max_level == BRIGHTNESS_MAX_LIMIT) ? 0 : 1;
+	pr_info("%s: requested limit=%d enable=%d current limit=%d\n", __FUNCTION__, max_level, enable, limit);
 	if (disp_aal_is_support() == false) {
 		mutex_lock(&bl_level_limit_mutex);
 		if (enable == 1) {
@@ -142,7 +145,7 @@ int setMaxbrightness(int max_level, int enable)
 			}
 		} else {
 			limit_flag = 0;
-			limit = 255;
+			limit = BRIGHTNESS_MAX_LIMIT;
 			mutex_unlock(&bl_level_limit_mutex);
 
 			if (current_level != 0) {
@@ -255,6 +258,7 @@ static void mt65xx_led_set(struct led_classdev *led_cdev,
 			last_level = level;
 			/* LEDS_DRV_DEBUG("brightness_set_cust:last_level=%d\n", last_level); */
 		} else {
+			last_level = level;
 			if (limit < current_level) {
 				level = limit;
 				LEDS_DRV_DEBUG
@@ -815,7 +819,7 @@ static int mt65xx_leds_probe(struct platform_device *pdev)
 #ifdef CONTROL_BL_TEMPERATURE
 
 	last_level = 0;
-	limit = 255;
+	limit = BRIGHTNESS_MAX_LIMIT;
 	limit_flag = 0;
 	current_level = 0;
 	LEDS_DRV_DEBUG

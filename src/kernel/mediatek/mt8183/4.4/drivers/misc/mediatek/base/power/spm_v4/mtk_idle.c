@@ -1141,7 +1141,7 @@ get_idle_idx:
 	}
 
 	/* Prevent potential out-of-bounds vulnerability */
-	i = (i >= NR_TYPES) ? NR_TYPES : i;
+	i = (i >= NR_TYPES) ? NR_TYPES - 1 : i;
 
 #ifdef CONFIG_MTK_DCS
 	if (dcs_lock_get)

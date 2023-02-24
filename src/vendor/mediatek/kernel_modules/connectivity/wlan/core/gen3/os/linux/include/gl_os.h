@@ -229,18 +229,18 @@ extern UINT_8 g_aucNvram[];
 #endif
 
 #if defined(CONFIG_IDME) || defined(CONFIG_AMZN_IDME)
-#define DEV_TYPE_ID_MAVERICK 0x003F
+#define DEV_TYPE_ID_abc123 0x003F
 #define DEV_TYPE_ID_TRONA 0x005E
-#define DEV_TYPE_ID_PINNACLES 0x0060
+#define DEV_TYPE_ID_abx123 0x0060
 #endif
 
 #if CFG_SUPPORT_ANT_DIVERSITY
-#define BOARD_ID_MAVERICK_PROTO         "003F001000010019"
-#define BOARD_ID_MAVERICK_HVT           "003F001100010019"
-#define BOARD_ID_MAVERICK_HVT1_1        "003F001110010019"
-#define BOARD_ID_MAVERICK_EVT           "003F001200010019"
-#define BOARD_ID_MAVERICK_DVT           "003F001300010019"
-#define BOARD_ID_MAVERICK_PVT           "003F001400010019"
+#define BOARD_ID_abc123_PROTO         "003F001000010019"
+#define BOARD_ID_abc123_HVT           "003F001100010019"
+#define BOARD_ID_abc123_HVT1_1        "003F001110010019"
+#define BOARD_ID_abc123_EVT           "003F001200010019"
+#define BOARD_ID_abc123_DVT           "003F001300010019"
+#define BOARD_ID_abc123_PVT           "003F001400010019"
 
 #define ANT_SWITCH_GOOD_PANEL           0x0000000C
 #define ANT_SWITCH_PANEL_IDME_PATTERN   0x0000000C
@@ -252,11 +252,11 @@ extern UINT_8 g_aucNvram[];
 #define LOW_ANT_SIGNAL 0
 /* ant_placement mapping to orientation 0,1,2,3 */
 /*modify for fos7*/
-#define ant_placement_maverick {MAIN_ANT_INDEX, SECOND_ANT_INDEX, SECOND_ANT_INDEX, MAIN_ANT_INDEX}
+#define ant_placement_abc123 {MAIN_ANT_INDEX, SECOND_ANT_INDEX, SECOND_ANT_INDEX, MAIN_ANT_INDEX}
 #define ant_placement_trona {MAIN_ANT_INDEX, MAIN_ANT_INDEX, SECOND_ANT_INDEX, SECOND_ANT_INDEX}
 
 /*modify for fos7 record the gpio high or low level of the ant */
-#define ant_signal_maverick {LOW_ANT_SIGNAL, HIGH_ANT_SIGNAL}
+#define ant_signal_abc123 {LOW_ANT_SIGNAL, HIGH_ANT_SIGNAL}
 #define ant_signal_trona {HIGH_ANT_SIGNAL, LOW_ANT_SIGNAL}
 
 extern unsigned int g_board_type;
@@ -665,7 +665,9 @@ struct _GLUE_INFO_T {
 	struct GL_Channel_scan_info arChannelScanInfo[FULL_SCAN_MAX_CHANNEL_NUM];
 	PARTIAL_SCAN_INFO rFullScanApChannel;
 	PUINT_8 pucFullScan2PartialChannel;
-	struct FT_IES rFtIeForTx;
+	struct FT_IES rFtIeForAuthTx;
+	struct FT_IES rFtIeForAssocTx;
+	u_int8_t fgIsFtAuth;
 	struct cfg80211_ft_event_params rFtEventParam;
 
 	/* FW Roaming */
@@ -720,6 +722,9 @@ enum TestModeCmdType {
 	TESTMODE_CMD_ID_WAPI = 2,
 	TESTMODE_CMD_ID_HS20 = 3,
 	TESTMODE_CMD_ID_STR_CMD = 102,
+#if CFG_SUPPORT_RSSI_STATISTICS
+	TESTMODE_RSSI_STATISTICS = 0x40,
+#endif
 	NUM_OF_TESTMODE_CMD_ID
 };
 
@@ -734,6 +739,13 @@ typedef struct _NL80211_DRIVER_TEST_MODE_PARAMS {
 	UINT_32 index;
 	UINT_32 buflen;
 } NL80211_DRIVER_TEST_MODE_PARAMS, *P_NL80211_DRIVER_TEST_MODE_PARAMS;
+
+struct NL80211_DRIVER_STRING_CMD_PARAMS {
+	NL80211_DRIVER_TEST_MODE_PARAMS hdr;
+	uint32_t reply_buf_size;
+	uint32_t reply_len;
+	uint8_t *reply_buf;
+};
 
 /*SW CMD */
 typedef struct _NL80211_DRIVER_SW_CMD_PARAMS {

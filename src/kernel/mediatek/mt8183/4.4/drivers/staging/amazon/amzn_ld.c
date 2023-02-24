@@ -859,6 +859,7 @@ static void ld_shutdown(struct platform_device *pdev)
 {
 	struct ld_data *ld = platform_get_drvdata(pdev);
 
+	g_ld = NULL;
 	cancel_delayed_work_sync(&ld->dwork);
 	unregister_pm_notifier(&ld->pm_notifier);
 	switch_dev_unregister(&ld->ld_switch);

@@ -1252,3 +1252,33 @@ UINT_8 secGetBssIdxByNetType(P_ADAPTER_T prAdapter)
 	return ucBssIndex;
 }
 
+#if CFG_SUPPORT_RSSI_STATISTICS
+void secHandleRxEapolPacket(IN P_ADAPTER_T prAdapter,
+			    IN P_SW_RFB_T prRetSwRfb)
+{
+
+	P_WLAN_MAC_HEADER_T prWlanHeader = NULL;
+	P_HW_MAC_RX_STS_GROUP_4_T prRxStatusGroup4 = NULL;
+	UINT_16 u2FrameCtrl;
+
+	do {
+		if (prRetSwRfb->u2PacketLen <= ETHER_HEADER_LEN)
+			break;
+		if (HAL_RX_STATUS_IS_HEADER_TRAN(prRetSwRfb->prRxStatus) == FALSE) {
+			prWlanHeader = (P_WLAN_MAC_HEADER_T) prRetSwRfb->pvHeader;
+			u2FrameCtrl = prWlanHeader->u2FrameCtrl;
+		} else {
+			prRxStatusGroup4 = prRetSwRfb->prRxStatusGroup4;
+			if (prRxStatusGroup4)
+				u2FrameCtrl = HAL_RX_STATUS_GET_FRAME_CTL_FIELD(prRxStatusGroup4);
+			else {
+				DBGLOG(RX, WARN, "prRxStatusGroup4 is NULL\n");
+				break;
+			}
+		}
+		prAdapter->arRxRssiStatistics.ucM1Rcpi = HAL_RX_STATUS_GET_RCPI(prRetSwRfb->prRxStatusGroup3);
+		prAdapter->arRxRssiStatistics.ucM1Retransmission = (u2FrameCtrl & MASK_FC_RETRY);
+	} while (FALSE);
+}
+#endif
+

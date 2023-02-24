@@ -104,7 +104,6 @@ int ion_heap_debug_show(struct ion_heap *heap, struct seq_file *s, void *unused)
 	size_t sec_sz = 0;
 	size_t prot_sz = 0;
 	size_t cam_sz = 0;
-	size_t va2mva_sz = 0;
 	size_t mm_sz = 0;
 
 	if (heap->type == (int)ION_HEAP_TYPE_MULTIMEDIA) {
@@ -182,8 +181,6 @@ int ion_heap_debug_show(struct ion_heap *heap, struct seq_file *s, void *unused)
 				mm_sz += buffer->size;
 			else if (buffer->heap->id == ION_HEAP_TYPE_MULTIMEDIA_FOR_CAMERA)
 				cam_sz += buffer->size;
-			else if (buffer->heap->id == ION_HEAP_TYPE_MULTIMEDIA_MAP_MVA)
-				va2mva_sz += buffer->size;
 		}
 
 		if (!buffer->handle_count)
@@ -208,7 +205,6 @@ int ion_heap_debug_show(struct ion_heap *heap, struct seq_file *s, void *unused)
 		ION_PRINT_LOG_OR_SEQ(s, "----------------------------------------------------\n");
 		ION_PRINT_LOG_OR_SEQ(s, "%16s %16zu\n", "mm-sz:", mm_sz);
 		ION_PRINT_LOG_OR_SEQ(s, "%16s %16zu\n", "cam-sz:", cam_sz);
-		ION_PRINT_LOG_OR_SEQ(s, "%16s %16zu\n", "va2mva-sz:", va2mva_sz);
 		ION_PRINT_LOG_OR_SEQ(s, "----------------------------------------------------\n");
 	}
 

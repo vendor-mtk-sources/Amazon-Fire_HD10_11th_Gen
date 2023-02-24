@@ -85,7 +85,7 @@ endif
 
 obj-$(CONFIG_SND_SOC_MTK_BTCVSD) += common_int/
 
-ifeq ($(CONFIG_ARCH_MTK_PROJECT),"maverick")
+ifeq ($(CONFIG_ARCH_MTK_PROJECT),"abc123")
 obj-y += mav-machine.o
 endif
 
@@ -93,6 +93,6 @@ ifeq ($(CONFIG_ARCH_MTK_PROJECT),"trona")
 obj-y += tro-machine.o
 endif
 
-ifeq ($(CONFIG_ARCH_MTK_PROJECT),"pinnacles")
+ifeq ($(CONFIG_ARCH_MTK_PROJECT),"abx123")
 obj-y += pin-machine.o
 endif

@@ -387,6 +387,9 @@ enum RM_REQ_PRIORITY rlmGetRmRequestPriority(PUINT_8 pucDestAddr);
 VOID rlmRunEventProcessNextRm(P_ADAPTER_T prAdapter, P_MSG_HDR_T prMsgHdr);
 
 VOID rlmScheduleNextRm(P_ADAPTER_T prAdapter);
+#if CFG_SUPPORT_DFS
+VOID rlmCsaTimeout(P_ADAPTER_T prAdapter, ULONG ulParamPtr);
+#endif
 
 /*******************************************************************************
 *                              F U N C T I O N S

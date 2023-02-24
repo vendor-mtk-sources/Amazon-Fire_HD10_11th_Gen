@@ -189,6 +189,7 @@ struct charger_custom_data {
 	int battery_cv;	/* uv */
 #ifdef CONFIG_MTK_USE_AGING_ZCV
 	int battery_cv_aging;	/* uv */
+	int battery_cv_aging2;	/* uv */
 #endif
 
 	int max_charger_voltage;
@@ -228,6 +229,13 @@ struct charger_custom_data {
 	int jeita_temp_t1_to_t2_cv_voltage_aging;
 	int jeita_temp_t0_to_t1_cv_voltage_aging;
 	int jeita_temp_below_t0_cv_voltage_aging;
+
+	int jeita_temp_above_t4_cv_voltage_aging2;
+	int jeita_temp_t3_to_t4_cv_voltage_aging2;
+	int jeita_temp_t2_to_t3_cv_voltage_aging2;
+	int jeita_temp_t1_to_t2_cv_voltage_aging2;
+	int jeita_temp_t0_to_t1_cv_voltage_aging2;
+	int jeita_temp_below_t0_cv_voltage_aging2;
 #endif
 	int temp_t4_threshold;
 	int temp_t4_thres_minus_x_degree;
@@ -471,6 +479,7 @@ struct charger_manager {
 	int top_off_mode_cv;
 #ifdef CONFIG_MTK_USE_AGING_ZCV
 	int top_off_mode_cv_aging;
+	int top_off_mode_cv_aging2;
 #endif
 	__kernel_time_t custom_plugin_time;
 	unsigned int top_off_mode_enable; /* 0=ratail unit, 1=demo unit */
@@ -522,6 +531,7 @@ extern int pmic_get_bif_battery_voltage(int *vbat);
 extern int pmic_is_bif_exist(void);
 extern int pmic_enable_hw_vbus_ovp(bool enable);
 extern bool pmic_is_battery_exist(void);
+extern int mtk_get_battery_cv(struct charger_manager *info);
 
 /* add legacy battery API */
 extern unsigned int battery_get_bat_soc(void);

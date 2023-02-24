@@ -1107,6 +1107,7 @@
 	/* common */
 	battery_cv = <4400000>;
 	battery_cv_aging = <4200000>;
+	battery_cv_aging2 = <4000000>;
 
 	ac_charger_input_current = <2500000>;
 	ac_charger_current = <3000000>;
@@ -1135,6 +1136,13 @@
 	jeita_temp_t0_to_t1_cv_voltage_aging = <4200000>;
 	jeita_temp_below_t0_cv_voltage_aging = <4200000>;
 
+	jeita_temp_above_t4_cv_voltage_aging2 = <4000000>;
+	jeita_temp_t3_to_t4_cv_voltage_aging2 = <4000000>;
+	jeita_temp_t2_to_t3_cv_voltage_aging2 = <4000000>;
+	jeita_temp_t1_to_t2_cv_voltage_aging2 = <4000000>;
+	jeita_temp_t0_to_t1_cv_voltage_aging2 = <4000000>;
+	jeita_temp_below_t0_cv_voltage_aging2 = <4000000>;
+
 	temp_t4_threshold = <55>;
 	temp_t4_thres_minus_x_degree = <52>;
 	temp_t3_threshold = <45>;
@@ -1159,6 +1167,7 @@
 	top_off_mode_time_threshold = <604800>; /* 7*86400 (7days) */
 	top_off_mode_cv = <4200000>; /* CV, uinit:uV */
 	top_off_mode_cv_aging = <4200000>; /* CV, uinit:uV */
+	top_off_mode_cv_aging2 = <0>; /* CV, uinit:uV */
 	top_off_difference_full_cv = <2500>; /* 25% */
 	normal_difference_full_cv = <500>; /* 5% */
 	vbat_exit_top_off_mode = <4000>; /* 4000mV */
@@ -1268,6 +1277,13 @@
 	battery2_profile_id = <0x1456>;
 	battery2_profile_name = "SCUD/CosMX";
 
+	battery0_profile_1_id = <0x1441>;
+	battery0_profile_1_name = "NVT/ATL";
+	battery1_profile_1_id = <0x1451>;
+	battery1_profile_1_name = "SCUD/ATL";
+	battery2_profile_1_id = <0x1456>;
+	battery2_profile_1_name = "SCUD/CosMX";
+
 	battery0_profile_2_id = <0x1441>;
 	battery0_profile_2_name = "NVT/ATL";
 	battery1_profile_2_id = <0x1451>;
@@ -1287,22 +1303,36 @@
 	Q_MAX_H_CURRENT_T3 = <6500 6500>;
 	Q_MAX_H_CURRENT_T4 = <6500 6500>;
 
-	Q_MAX_2_T0 = <5500 5500>;
-	Q_MAX_2_T1 = <5500 5500>;
-	Q_MAX_2_T2 = <5500 5500>;
-	Q_MAX_2_T3 = <5500 5500>;
-	Q_MAX_2_T4 = <5500 5500>;
+	Q_MAX_1_T0 = <5500 5500>;
+	Q_MAX_1_T1 = <5500 5500>;
+	Q_MAX_1_T2 = <5500 5500>;
+	Q_MAX_1_T3 = <5500 5500>;
+	Q_MAX_1_T4 = <5500 5500>;
 
-	Q_MAX_H_CURRENT_2_T0 = <5500 5500>;
-	Q_MAX_H_CURRENT_2_T1 = <5500 5500>;
-	Q_MAX_H_CURRENT_2_T2 = <5500 5500>;
-	Q_MAX_H_CURRENT_2_T3 = <5500 5500>;
-	Q_MAX_H_CURRENT_2_T4 = <5500 5500>;
+	Q_MAX_H_CURRENT_1_T0 = <5500 5500>;
+	Q_MAX_H_CURRENT_1_T1 = <5500 5500>;
+	Q_MAX_H_CURRENT_1_T2 = <5500 5500>;
+	Q_MAX_H_CURRENT_1_T3 = <5500 5500>;
+	Q_MAX_H_CURRENT_1_T4 = <5500 5500>;
+
+	Q_MAX_2_T0 = <4050 3900>;
+	Q_MAX_2_T1 = <4150 3800>;
+	Q_MAX_2_T2 = <3800 3450>;
+	Q_MAX_2_T3 = <3500 3250>;
+	Q_MAX_2_T4 = <3500 2850>;
+
+	Q_MAX_H_CURRENT_2_T0 = <4050 3900>;
+	Q_MAX_H_CURRENT_2_T1 = <4150 3800>;
+	Q_MAX_H_CURRENT_2_T2 = <3800 3450>;
+	Q_MAX_H_CURRENT_2_T3 = <3500 3250>;
+	Q_MAX_H_CURRENT_2_T4 = <3500 2850>;
 
 	#include "bat_setting/mt8183_battery_table_ext_EVT_0x1451_SCUD_ATL.dtsi"
 	#include "bat_setting/mt8183_battery_table_ext_DVT_0x1451_SCUD_ATL_4p2V.dtsi"
+	#include "bat_setting/mt8183_battery_table_ext_DVT_0x1451_SCUD_ATL_4V.dtsi"
 	#include "bat_setting/mt8183_battery_table_ext_EVT_0x1456_SCUD_CosMX.dtsi"
 	#include "bat_setting/mt8183_battery_table_ext_DVT_0x1456_SCUD_CosMX_4p2V.dtsi"
+	#include "bat_setting/mt8183_battery_table_ext_DVT_0x1456_SCUD_CosMX_4V.dtsi"
 };
 /* wireless charger */
 &pio {

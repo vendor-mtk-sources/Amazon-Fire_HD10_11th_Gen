@@ -7303,25 +7303,19 @@ int wlanSuspendRekeyOffload(P_GLUE_INFO_T prGlueInfo, IN UINT_8 ucRekeyDisable)
 #endif
 
 #if CFG_NOTIFY_TX_HANG_METRIC
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
 {
-	int ret = -1;
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+#define WIFI_MAC_UNREACH	"wifi-mac-layer-unreachable"
 	int minerva_ret = -1;
 
 	if (fgIsPid) {
 		if (ucPidOverflow == 0)
 			return;
-		ret = log_counter_to_vitals(ANDROID_LOG_INFO,
-			"Kernel vitals", "wifiKDM", "wifi-mac-layer-unreachable",
-			"NoPID", 1, "count", NULL, VITALS_NORMAL);
-		if (ret)
-			DBGLOG(AIS, ERROR,
-				"conn-PID-Overflow matric fail\n");
-		else
-			ucPidOverflow = 0;
-
-		minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "wifi-mac-layer-unreachable", "NoPID", 1, NULL);
+		minerva_ret = minerva_timer_to_vitals(ANDROID_LOG_INFO,
+						MINERVA_WIFI_GROUP_ID, MINERVA_WIFI_SCHEMA_ID,
+						"Kernel vitals", "wifiKDM", WIFI_MAC_UNREACH,
+						"NoPID", (u32)1, "count", VITALS_NORMAL, NULL, NULL);
 		if (minerva_ret)
 			DBGLOG(AIS, ERROR,
 				"conn-PID-Overflow minerva_ret fail\n");
@@ -7331,25 +7325,18 @@ VOID wlanNotifyTxHangMetric(BOOLEAN fgIsPid)
 	else {
 		if (ucAbSence == 0)
 			return;
-		ret = log_counter_to_vitals(ANDROID_LOG_INFO,
-			"Kernel vitals", "wifiKDM", "wifi-mac-layer-unreachable",
-			"NoPresence", 1, "count", NULL, VITALS_NORMAL);
-		if (ret)
-			DBGLOG(QM, WARN,
-				"Absence is timeout matric to fwk fail\n");
-		else
-			ucAbSence = 0;
-
-		minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "wifi-mac-layer-unreachable", "NoPresence", 1, NULL);
+		minerva_ret = minerva_timer_to_vitals(ANDROID_LOG_INFO,
+						MINERVA_WIFI_GROUP_ID, MINERVA_WIFI_SCHEMA_ID,
+						"Kernel vitals", "wifiKDM", WIFI_MAC_UNREACH,
+						"NoPresence", (u32)1, "count", VITALS_NORMAL, NULL, NULL);
 		if (minerva_ret)
 			DBGLOG(AIS, ERROR,
 				"conn-PID-Overflow minerva_ret fail\n");
 		else
 			ucAbSence = 0;
 	}
-
-}
 #endif
+}
 #endif
 
 uint8_t wlanGetBssIdx(struct net_device *ndev)

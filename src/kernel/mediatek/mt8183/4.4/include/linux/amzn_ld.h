@@ -1,11 +1,11 @@
 #ifndef _AMZN_LD_H
 #define _AMZN_LD_H
 
-#ifdef CONFIG_AMAZON_METRICS_LOG
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #include <linux/metricslog.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include <linux/amzn_metricslog.h>
 #endif
 
@@ -78,7 +78,7 @@ struct ld_data {
 	int state;
 };
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #define BATTERY_METRICS_BUFF_SIZE 512
 char g_m_buf[BATTERY_METRICS_BUFF_SIZE];
 

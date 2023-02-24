@@ -107,6 +107,9 @@ static int mt6370_ldo_set_voltage_sel(
 	const int count = rdev->desc->n_voltages;
 	u8 data;
 
+	if (!info)
+		return -EINVAL;
+
 	if (selector > count)
 		return -EINVAL;
 
@@ -123,6 +126,9 @@ static int mt6370_ldo_get_voltage_sel(struct regulator_dev *rdev)
 	struct mt6370_pmu_ldo_data *info = rdev_get_drvdata(rdev);
 	int ret;
 
+	if (!info)
+		return -EINVAL;
+
 	ret = mt6370_pmu_reg_read(info->chip,
 		mt6370_ldo_regulators.vol_reg);
 
@@ -137,6 +143,9 @@ static int mt6370_ldo_enable(struct regulator_dev *rdev)
 {
 	struct mt6370_pmu_ldo_data *info = rdev_get_drvdata(rdev);
 
+	if (!info)
+		return -EINVAL;
+
 	return mt6370_pmu_reg_set_bit(info->chip,
 		mt6370_ldo_regulators.enable_reg,
 		mt6370_ldo_regulators.enable_bit);
@@ -145,6 +154,9 @@ static int mt6370_ldo_enable(struct regulator_dev *rdev)
 static int mt6370_ldo_disable(struct regulator_dev *rdev)
 {
 	struct mt6370_pmu_ldo_data *info = rdev_get_drvdata(rdev);
+
+	if (!info)
+		return -EINVAL;
 
 	return mt6370_pmu_reg_clr_bit(info->chip,
 		mt6370_ldo_regulators.enable_reg,
@@ -155,6 +167,9 @@ static int mt6370_ldo_is_enabled(struct regulator_dev *rdev)
 {
 	struct mt6370_pmu_ldo_data *info = rdev_get_drvdata(rdev);
 	int ret;
+
+	if (!info)
+		return -EINVAL;
 
 	ret = mt6370_pmu_reg_read(info->chip,
 		mt6370_ldo_regulators.enable_reg);

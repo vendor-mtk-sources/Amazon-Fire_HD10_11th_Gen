@@ -19,6 +19,13 @@ config AMAZON_SIGN_OF_LIFE_MTK
 	help
 	enable the life cycle metrics to log device boot and shutdown information on MTK Platform
 
+config AMAZON_MINERVA_METRICS_LOG
+	bool "Amazon Minerva Metrics logger driver"
+	select RING_BUFFER
+	default n
+	---help---
+		Enable Amazon Minerva logger driver
+
 config AMAZON_METRICS_LOG
 	bool "Amazon Metrics logger driver"
 	select RING_BUFFER

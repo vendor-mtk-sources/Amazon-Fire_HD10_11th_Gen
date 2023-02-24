@@ -21,7 +21,7 @@
 #include "thermal_core.h"
 #include <linux/thermal_framework.h>
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include <linux/amzn_metricslog.h>
 #define VIRTUAL_SENSOR_GOV_METRICS_STR_LEN 128
 #endif
@@ -46,6 +46,10 @@ static int virtual_sensor_throttle(struct thermal_zone_device *tz, int trip)
 	unsigned long cur_state;
 #ifdef CONFIG_AMZN_METRICS_LOG
 	char buf[VIRTUAL_SENSOR_GOV_METRICS_STR_LEN];
+#endif
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+	char key_buf[128];
+	char dimensions_buf[128];
 #endif
 	struct virtual_sensor_thermal_zone *tzone;
 	struct vs_thermal_platform_data *pdata;
@@ -135,6 +139,16 @@ static int virtual_sensor_throttle(struct thermal_zone_device *tz, int trip)
 				log_to_metrics(ANDROID_LOG_INFO, "ThermalEvent",
 					       buf);
 #endif
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+				snprintf(key_buf, 128, "vs_cooler_%s_throttling", cdev->type);
+				snprintf(dimensions_buf, 128, "\"trip_temp\"#\"%d\"$\"target\"#\"%lu\"",
+						temp, target);
+				minerva_counter_to_vitals(ANDROID_LOG_INFO,
+						VITALS_THERMAL_GROUP_ID, VITALS_THERMAL_THROTTLE_SCHEMA_ID,
+						"thermal", "thermal", "thermalthrottle",
+						key_buf, tz->temperature, "temp",
+						NULL, VITALS_NORMAL, dimensions_buf, NULL);
+#endif
 			} else {
 				pr_warning
 				    ("VS cooler %s unthrottling, cur_temp=%d, trip_temp=%d, target=%lu\n",
@@ -148,6 +162,16 @@ static int virtual_sensor_throttle(struct thermal_zone_device *tz, int trip)
 					 temp, target);
 				log_to_metrics(ANDROID_LOG_INFO, "ThermalEvent",
 					       buf);
+#endif
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+				snprintf(key_buf, 128, "vs_cooler_%s_unthrottling", cdev->type);
+				snprintf(dimensions_buf, 128, "\"trip_temp\"#\"%d\"$\"target\"#\"%lu\"",
+						temp, target);
+				minerva_counter_to_vitals(ANDROID_LOG_INFO,
+						VITALS_THERMAL_GROUP_ID, VITALS_THERMAL_THROTTLE_SCHEMA_ID,
+						"thermal", "thermal", "thermalthrottle",
+						key_buf, tz->temperature, "temp",
+						NULL, VITALS_NORMAL, dimensions_buf, NULL);
 #endif
 			}
 

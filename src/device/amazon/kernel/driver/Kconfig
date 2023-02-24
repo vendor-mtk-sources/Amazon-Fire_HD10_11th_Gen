@@ -24,6 +24,13 @@ config AMZN_POWEROFF_LOG
 	help
 	enable Long press key power off log
 
+config AMZN_MINERVA_METRICS_LOG
+	bool "Amazon Minerva Metrics logger driver"
+	select RING_BUFFER
+	default n
+	---help---
+		Enable Amazon Minerva logger driver
+
 config AMZN_METRICS_LOG
 	bool "Amazon Metrics logger driver"
 	select RING_BUFFER

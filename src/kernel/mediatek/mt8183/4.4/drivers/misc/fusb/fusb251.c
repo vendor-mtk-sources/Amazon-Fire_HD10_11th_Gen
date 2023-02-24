@@ -1407,11 +1407,18 @@ static void fusb251_report_event(struct fusb251 *fusb251, int event)
 			duration_sec = 0;
 		else
 			duration_sec = now_ts.tv_sec - fusb251->event_ts.tv_sec;
-
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 		fusb251_metrics_log("LiquidDetection",
 				"LiquidDetection:def:ld_current_state=%d;CT;1,ld_previous_state=%d;CT;1,ld_duration_sec=%d;CT;1:NR",
 				event, last_event, duration_sec);
-
+#endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+		minerva_metrics_log(g_m_buf_fusb251, METRICS_BUFF_SIZE_FUSB251,
+				"%s:%s:100:%s,%s,%s,ld_current_state=%d;IN,ld_previous_state=%d;IN,"
+				"ld_duration_sec=%d;IN:us-east-1",
+				METRICS_LD_GROUP_ID, METRICS_LD_SCHEMA_ID, PREDEFINED_ESSENTIAL_KEY,
+				PREDEFINED_MODEL_KEY, PREDEFINED_TZ_KEY, event, last_event, duration_sec);
+#endif
 		memcpy(&fusb251->event_ts, &now_ts, sizeof(struct timespec));
 	} else {
 		if (event == TYPE_DRY)

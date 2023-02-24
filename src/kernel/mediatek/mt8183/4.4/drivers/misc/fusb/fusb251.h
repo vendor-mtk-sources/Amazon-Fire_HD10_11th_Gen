@@ -23,11 +23,11 @@
 #include <linux/semaphore.h>
 #include <linux/workqueue.h>
 #include <linux/switch.h>
-#ifdef CONFIG_AMAZON_METRICS_LOG
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #include <linux/metricslog.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include <linux/amzn_metricslog.h>
 #endif
 
@@ -323,15 +323,15 @@ int sbuft_det_MV_table[] = {100, 200, 300, 400, 500, 600,
 int mos_det_R_table[] = {17, 36, 56, 80, 107, 137, 172, 213,
 	262, 320, 391, 480, 594, 747, 960, 1280};
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-#define BATTERY_METRICS_BUFF_SIZE 512
-char g_m_buf_fusb251[BATTERY_METRICS_BUFF_SIZE];
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+#define METRICS_BUFF_SIZE_FUSB251 512
+char g_m_buf_fusb251[METRICS_BUFF_SIZE_FUSB251];
 
 #define fusb251_metrics_log(domain, fmt, ...)				\
 do {	\
-	memset(g_m_buf_fusb251, 0, BATTERY_METRICS_BUFF_SIZE);			\
+	memset(g_m_buf_fusb251, 0, METRICS_BUFF_SIZE_FUSB251);		\
 	snprintf(g_m_buf_fusb251, sizeof(g_m_buf_fusb251), fmt, ##__VA_ARGS__);	\
-	log_to_metrics(ANDROID_LOG_INFO, domain, g_m_buf_fusb251);		\
+	log_to_metrics(ANDROID_LOG_INFO, domain, g_m_buf_fusb251);	\
 } while (0)
 #else
 static inline void fusb251_metrics_log(void) {}

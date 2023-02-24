@@ -2,7 +2,7 @@
 #
 #  build_kernel_config.sh
 #
-#  Copyright (c) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#  Copyright (c) 2021-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 ################################################################################
 
@@ -19,5 +19,6 @@ KERNEL_IMAGES="arch/arm64/boot/Image:arch/arm64/boot/Image.gz:arch/arm64/boot/Im
 
 ################################################################################
 # NOTE: You must fill in the following with the path to a copy of Clang compiler
+# Recommended version 6.0.2 (or 4691093).
 ################################################################################
 CLANG_COMPILER_PATH=""

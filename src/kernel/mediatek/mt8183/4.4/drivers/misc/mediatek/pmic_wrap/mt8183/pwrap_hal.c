@@ -1704,8 +1704,11 @@ static irqreturn_t mt_pmic_wrap_irq(int irqno, void *dev_id)
 		PWRAPLOG("g_wrap_wdt_irq_count=%d\n", g_wrap_wdt_irq_count);
 
 	} else if ((int0_flg & 0x02) == 0x02) {
-		snprintf(str, 50, "PWRAP CRC=0x%x",
-			WRAP_RD32(PMIC_WRAP_SIG_ERRVAL));
+		if (snprintf(str, 50, "PWRAP CRC=0x%x",
+			WRAP_RD32(PMIC_WRAP_SIG_ERRVAL)) < 0) {
+			PWRAPLOG("[%s] snprintf PWRAP CRC failed\n", __func__);
+			return -1;
+		}
 		aee_kernel_warning(str, str);
 		pwrap_logging_at_isr();
 		pwrap_reenable_pmic_logging();

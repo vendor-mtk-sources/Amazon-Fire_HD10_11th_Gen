@@ -24,7 +24,11 @@ subdir-ccflags-y += -Werror -I$(srctree)/drivers/misc/mediatek/usb_c/tcpc/inc/
 
 ifeq ($(CONFIG_MTK_GAUGE_VERSION),30)
 	obj-y += mtk_battery.o mtk_power_misc.o mtk_gauge_coulomb_service.o mtk_gauge_class.o mtk_battery_recovery.o mtk_battery_core.o
-	obj-$(CONFIG_AMAZON_METRICS_LOG) += battery_metrics.o
-	obj-$(CONFIG_AMZN_METRICS_LOG) += battery_metrics.o
+ifeq ($(or $(strip $(CONFIG_AMZN_METRICS_LOG)), $(strip $(CONFIG_AMZN_MINERVA_METRICS_LOG))),y)
+	obj-y += battery_metrics.o
+endif
+ifeq ($(or $(strip $(CONFIG_AMAZON_METRICS_LOG)), $(strip $(CONFIG_AMAZON_MINERVA_METRICS_LOG))),y)
+	obj-y += battery_metrics.o
+endif
 endif
 

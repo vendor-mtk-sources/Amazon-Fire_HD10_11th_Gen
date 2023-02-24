@@ -1,5 +1,5 @@
-	battery1_profile_2_t0_num = <100>;
-	battery1_profile_2_t0 =
+	battery1_profile_1_t0_num = <100>;
+	battery1_profile_1_t0 =
 	<
 	0	41480	665
 	566	41376	665
@@ -102,8 +102,8 @@
 	55434	32415	1240
 	56000	32415	1240
 	>;
-	battery1_profile_2_t1_num = <100>;
-	battery1_profile_2_t1 =
+	battery1_profile_1_t1_num = <100>;
+	battery1_profile_1_t1 =
 	<
 	0	41623	970
 	566	41516	975
@@ -206,8 +206,8 @@
 	55434	33050	1559
 	56000	32896	1590
 	>;
-	battery1_profile_2_t2_num = <100>;
-	battery1_profile_2_t2 =
+	battery1_profile_1_t2_num = <100>;
+	battery1_profile_1_t2 =
 	<
 	0	41635	2900
 	566	41510	2904
@@ -310,8 +310,8 @@
 	55434	32979	6710
 	56000	32979	6710
 	>;
-	battery1_profile_2_t3_num = <100>;
-	battery1_profile_2_t3 =
+	battery1_profile_1_t3_num = <100>;
+	battery1_profile_1_t3 =
 	<
 	0	41663	3945
 	566	41532	3951
@@ -414,8 +414,8 @@
 	55434	34241	10191
 	56000	33054	11735
 	>;
-	battery1_profile_2_t4_num = <100>;
-	battery1_profile_2_t4 =
+	battery1_profile_1_t4_num = <100>;
+	battery1_profile_1_t4 =
 	<
 	0	41580	9781
 	566	41388	9781

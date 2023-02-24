@@ -3413,15 +3413,13 @@ static ssize_t use_aging_zcv_store(
 		bm_err("[%s] buf is %s\n",
 			__func__, buf);
 		ret = kstrtoul(buf, 10, &val);
-		if (val < 0) {
-			bm_err(
-				"[%s] val is %d ??\n",
-				__func__,
-				(int)val);
-			val = 0;
+		if (ret < 0) {
+			bm_err("[%s] err, ret is %d\n",
+				__func__, ret);
+			return ret;
 		}
 
-		if (val == 1)
+		if ((val < 3) && ((int)val > gm.use_aging_zcv))
 			wakeup_fg_algo_cmd(
 				FG_INTR_KERNEL_CMD,
 				FG_KERNEL_CMD_USE_AGING_ZCV,
@@ -3429,10 +3427,8 @@ static ssize_t use_aging_zcv_store(
 		else
 			return size;
 
-		bm_err(
-			"[%s] Use aging zcv = %d\n",
-			__func__,
-			(int)val);
+		bm_err("[%s] Use aging zcv = %d\n",
+			__func__, (int)val);
 	}
 
 	return size;
@@ -3457,15 +3453,13 @@ static ssize_t disable_aging_zcv_store(
 		bm_err("[%s] buf is %s\n",
 			__func__, buf);
 		ret = kstrtoul(buf, 10, &val);
-		if (val < 0) {
-			bm_err(
-				"[%s] val is %d ??\n",
-				__func__,
-				(int)val);
-			val = 0;
+		if (ret < 0) {
+			bm_err("[%s] err, ret is %d ??\n",
+				__func__, ret);
+			return ret;
 		}
 
-		if (val == 1) {
+		if (val != 0) {
 			val = 0;
 			wakeup_fg_algo_cmd(
 				FG_INTR_KERNEL_CMD,
@@ -3475,10 +3469,8 @@ static ssize_t disable_aging_zcv_store(
 			return size;
 		}
 
-		bm_err(
-			"[%s] Use aging zcv = %d\n",
-			__func__,
-			(int)val);
+		bm_err("[%s] Use aging zcv = %d\n",
+			__func__, (int)val);
 	}
 
 	return size;

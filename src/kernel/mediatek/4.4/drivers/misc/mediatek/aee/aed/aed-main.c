@@ -39,6 +39,7 @@
 #include <linux/seq_file.h>
 #include <linux/completion.h>
 #include <linux/rtc.h>
+#include <linux/rwsem.h>
 #include "aed.h"
 
 struct aee_req_queue {
@@ -65,6 +66,8 @@ static int aee_force_exp = AEE_FORCE_EXP_NOT_SET;
 static int ke_log_available = 1;
 
 static struct proc_dir_entry *aed_proc_dir;
+static DECLARE_RWSEM(ee_rw_ops_sem);
+static DECLARE_RWSEM(ke_rw_ops_sem);
 
 #define MaxStackSize 8100
 #define MaxMapsSize 16384
@@ -1002,11 +1005,17 @@ static unsigned int aed_ee_poll(struct file *file, struct poll_table_struct *pta
 
 static ssize_t aed_ee_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
+	ssize_t ret = 0;
+
+	down_read(&ee_rw_ops_sem);
 	if (aed_dev.eerec == NULL) {
-		LOGD("aed_ee_read fail for invalid kerec\n");
-		return 0;
+		pr_info("aed_ee_read fail for invalid kerec\n");
+		up_read(&ee_rw_ops_sem);
+		return ret;
 	}
-	return msg_copy_to_user(__func__, aed_dev.eerec->msg, buf, count, f_pos);
+	ret = msg_copy_to_user(__func__, aed_dev.eerec->msg, buf, count, f_pos);
+	up_read(&ee_rw_ops_sem);
+	return ret;
 }
 
 static ssize_t aed_ee_write(struct file *filp, const char __user *buf, size_t count,
@@ -1019,22 +1028,27 @@ static ssize_t aed_ee_write(struct file *filp, const char __user *buf, size_t co
 	/* recevied a new request means the previous response is unavilable */
 	/* 1. set position to be zero */
 	/* 2. destroy the previous response message */
+	down_write(&ee_rw_ops_sem);
 	*f_pos = 0;
 
-	if (!eerec)
+	if (!eerec) {
+		up_write(&ee_rw_ops_sem);
 		return -1;
+	}
 
 	msg_destroy(&eerec->msg);
 
 	/* the request must be an *struct AE_Msg buffer */
 	if (count != sizeof(struct AE_Msg)) {
-		LOGD("%s: ERR, aed_write count=%zx\n", __func__, count);
+		pr_info("%s: ERR, aed_write count=%zx\n", __func__, count);
+		up_write(&ee_rw_ops_sem);
 		return -1;
 	}
 
 	rsize = copy_from_user(&msg, buf, count);
 	if (rsize != 0) {
-		LOGD("%s: ERR, copy_from_user rsize=%d\n", __func__, rsize);
+		pr_info("%s: ERR, copy_from_user rsize=%d\n", __func__, rsize);
+		up_write(&ee_rw_ops_sem);
 		return -1;
 	}
 
@@ -1043,6 +1057,7 @@ static ssize_t aed_ee_write(struct file *filp, const char __user *buf, size_t co
 	if (msg.cmdType == AE_REQ) {
 		if (!ee_log_avail()) {
 			ee_gen_notavail_msg();
+			up_write(&ee_rw_ops_sem);
 			return count;
 		}
 		switch (msg.cmdId) {
@@ -1080,6 +1095,7 @@ static ssize_t aed_ee_write(struct file *filp, const char __user *buf, size_t co
 		}
 	} else if (msg.cmdType == AE_RSP) {	/* IGNORE */
 	}
+	up_write(&ee_rw_ops_sem);
 
 	return count;
 }
@@ -1213,7 +1229,12 @@ static const struct file_operations proc_current_ke_##ENTRY##_fops = { \
 
 static ssize_t aed_ke_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
-	return msg_copy_to_user(__func__, aed_dev.kerec.msg, buf, count, f_pos);
+	ssize_t ret = 0;
+
+	down_read(&ke_rw_ops_sem);
+	ret = msg_copy_to_user(__func__, aed_dev.kerec.msg, buf, count, f_pos);
+	up_read(&ke_rw_ops_sem);
+	return ret;
 }
 
 static ssize_t aed_ke_write(struct file *filp, const char __user *buf, size_t count,
@@ -1225,18 +1246,26 @@ static ssize_t aed_ke_write(struct file *filp, const char __user *buf, size_t co
 	/* recevied a new request means the previous response is unavilable */
 	/* 1. set position to be zero */
 	/* 2. destroy the previous response message */
+	down_write(&ke_rw_ops_sem);
 	*f_pos = 0;
 	msg_destroy(&aed_dev.kerec.msg);
 
 	/* the request must be an * AE_Msg buffer */
 	if (count != sizeof(struct AE_Msg)) {
-		LOGD("ERR: aed_write count=%zx\n", count);
+		pr_info("ERR: aed_write count=%zx\n", count);
+		up_write(&ke_rw_ops_sem);
 		return -1;
 	}
 
+	if (!buf) {
+		pr_info("ERR: aed_write buf=NULL\n");
+		up_write(&ke_rw_ops_sem);
+		return -1;
+	}
 	rsize = copy_from_user(&msg, buf, count);
 	if (rsize != 0) {
-		LOGD("copy_from_user rsize=%d\n", rsize);
+		pr_info("copy_from_user rsize=%d\n", rsize);
+		up_write(&ke_rw_ops_sem);
 		return -1;
 	}
 
@@ -1245,7 +1274,7 @@ static ssize_t aed_ke_write(struct file *filp, const char __user *buf, size_t co
 	if (msg.cmdType == AE_REQ) {
 		if (!ke_log_avail()) {
 			ke_gen_notavail_msg();
-
+			up_write(&ke_rw_ops_sem);
 			return count;
 		}
 
@@ -1294,6 +1323,7 @@ static ssize_t aed_ke_write(struct file *filp, const char __user *buf, size_t co
 		}
 	} else if (msg.cmdType == AE_RSP) {	/* IGNORE */
 	}
+	up_write(&ke_rw_ops_sem);
 
 	return count;
 }
@@ -2056,8 +2086,9 @@ static int aed_proc_init(void)
 
 	aee_rr_proc_init(aed_proc_dir);
 
+#if IS_ENABLED(CONFIG_MTK_AEE_UT)
 	aed_proc_debug_init(aed_proc_dir);
-
+#endif
 	dram_console_init(aed_proc_dir);
 
 	return 0;
@@ -2068,8 +2099,9 @@ static int aed_proc_done(void)
 	remove_proc_entry(CURRENT_KE_CONSOLE, aed_proc_dir);
 	remove_proc_entry(CURRENT_EE_COREDUMP, aed_proc_dir);
 
+#if IS_ENABLED(CONFIG_MTK_AEE_UT)
 	aed_proc_debug_done(aed_proc_dir);
-
+#endif
 	dram_console_done(aed_proc_dir);
 
 	remove_proc_entry("aed", NULL);

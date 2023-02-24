@@ -87,10 +87,18 @@ static void ld_report_event(struct ld_data *ld, int event)
 			duration_sec = now_ts.tv_sec - ld->event_ts.tv_sec;
 			adc1 = adc2 = 0;
 		}
-
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 		ld_metrics_log("LiquidDetection",
 		"LiquidDetection:def:ld_current_state=%d;CT;1,ld_previous_state=%d;CT;1,ld_duration_sec=%d;CT;1,ld_adc1=%d;CT;1,ld_adc2=%d;CT;1:NR",
 				event, pre_event, duration_sec, adc1, adc2);
+#endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+		minerva_metrics_log(g_m_buf, BATTERY_METRICS_BUFF_SIZE,
+				"%s:%s:100:%s,%s,%s,ld_current_state=%d;IN,"
+				"ld_previous_state=%d;IN,ld_duration_sec=%d;IN:us-east-1",
+				METRICS_LD_GROUP_ID, METRICS_LD_SCHEMA_ID, PREDEFINED_ESSENTIAL_KEY,
+				PREDEFINED_MODEL_KEY, PREDEFINED_TZ_KEY, event, pre_event, duration_sec);
+#endif
 		memcpy(&ld->event_ts, &now_ts, sizeof(struct timespec));
 	}
 }

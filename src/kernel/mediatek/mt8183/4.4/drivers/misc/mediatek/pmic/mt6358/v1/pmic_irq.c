@@ -42,11 +42,11 @@
 #include <mt-plat/mtk_ccci_common.h>
 #include <mt-plat/mtk_rtc.h>
 
-#ifdef CONFIG_AMAZON_METRICS_LOG
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #include <linux/metricslog.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include <linux/amzn_metricslog.h>
 #endif
 
@@ -281,7 +281,7 @@ struct pmic_sp_interrupt sp_interrupts[] = {
 
 unsigned int sp_interrupt_size = ARRAY_SIZE(sp_interrupts);
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 static struct work_struct metrics_work;
 static bool pwrkey_press;
 static void pwrkey_log_to_metrics(struct work_struct *data);
@@ -337,18 +337,31 @@ static unsigned int pmic_check_intNo(enum PMIC_IRQ_ENUM intNo,
 	return 0;
 }
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-#define PWRKEY_METRICS_STR_LEN 128
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+#define PWRKEY_METRICS_STR_LEN 512
+
 static void pwrkey_log_to_metrics(struct work_struct *data)
 {
 	char *action;
 	char buf[PWRKEY_METRICS_STR_LEN];
 
 	action = (pwrkey_press) ? "press" : "release";
-	snprintf(buf, PWRKEY_METRICS_STR_LEN,
+
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+	if (snprintf(buf, PWRKEY_METRICS_STR_LEN,
 		"%s:powi%c:report_action_is_%s=1;CT;1:NR", __func__,
-		action[0], action);
+		action[0], action) < 0) {
+		pr_err("[%s] snprintf failed\n", __func__);
+		return;
+	}
 	log_to_metrics(ANDROID_LOG_INFO, "PowerKeyEvent", buf);
+#endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	minerva_metrics_log(buf, PWRKEY_METRICS_STR_LEN,
+		"%s:%s:100:%s,report_action_is_action=%s;SY:us-east-1",
+		METRICS_PWRKEY_GROUP_ID, METRICS_PWRKEY_SCHEMA_ID,
+		PREDEFINED_ESSENTIAL_KEY, action);
+#endif
 }
 #endif
 
@@ -368,7 +381,7 @@ void pwrkey_int_handler(void)
 	kpd_pwrkey_pmic_handler(0x1);
 #endif
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 	pwrkey_press = true;
 	schedule_work(&metrics_work);
 #endif
@@ -388,7 +401,7 @@ void pwrkey_int_handler_r(void)
 	kpd_pwrkey_pmic_handler(0x0);
 #endif
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 	pwrkey_press = false;
 	schedule_work(&metrics_work);
 #endif
@@ -472,7 +485,10 @@ static void oc_int_handler(enum PMIC_IRQ_ENUM intNo, const char *int_name)
 	default:
 		/* issue AEE exception and disable OC interrupt */
 		kernel_dump_exception_reg();
-		snprintf(oc_str, 30, "PMIC OC:%s", int_name);
+		if (snprintf(oc_str, 30, "PMIC OC:%s", int_name) < 0) {
+			pr_notice(PMICTAG "[%s] snprintf PMIC OC failed\n", __func__);
+			return;
+		}
 		aee_kernel_warning(oc_str, "\nCRDISPATCH_KEY:PMIC OC\nOC Interrupt: %s", int_name);
 		pmic_enable_interrupt(intNo, 0, "PMIC");
 		pr_notice(PMICTAG "[PMIC_INT] disable OC interrupt: %s\n", int_name);
@@ -502,7 +518,10 @@ static void md_oc_int_handler(enum PMIC_IRQ_ENUM intNo, const char *int_name)
 	default:
 		break;
 	}
-	snprintf(oc_str, 30, "PMIC OC:%s", int_name);
+	if (snprintf(oc_str, 30, "PMIC OC:%s", int_name) < 0) {
+		pr_notice(PMICTAG "[%s] snprintf PMIC OC failed\n", __func__);
+		return;
+	}
 #ifdef CONFIG_MTK_CCCI_DEVICES
 	aee_kernel_warning(oc_str, "\nCRDISPATCH_KEY:MD OC\nOC Interrupt: %s", int_name);
 	ret = exec_ccci_kern_func_by_md_id(MD_SYS1, ID_PMIC_INTR, (char *)&data_int32, 4);
@@ -888,7 +907,7 @@ void PMIC_EINT_SETTING(void)
 	kpoc_reboot_timer.function = kpoc_reboot_timer_func;
 #endif
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 	INIT_WORK(&metrics_work, pwrkey_log_to_metrics);
 #endif
 }

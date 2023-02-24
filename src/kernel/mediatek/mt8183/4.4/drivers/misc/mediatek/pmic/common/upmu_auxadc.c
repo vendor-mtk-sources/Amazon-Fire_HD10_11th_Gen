@@ -187,7 +187,12 @@ int pmic_get_auxadc_value(u8 list)
 
 void pmic_auxadc_dump_regs(char *buf)
 {
-	snprintf(buf+strlen(buf), 1024, "====%s====\n", __func__);
+	int ret = 0;
+
+	ret = snprintf(buf+strlen(buf), 1024, "====%s====\n", __func__);
+	if (ret < 0)
+		return;
+
 #ifdef CONFIG_MTK_PMIC_CHIP_MT6335
 	mt6335_auxadc_dump_regs(buf);
 #endif /* CONFIG_MTK_PMIC_CHIP_MT6335*/
@@ -321,6 +326,7 @@ static ssize_t mtk_auxadc_show(struct device *dev,
 	ptrdiff_t cmd;
 	int i;
 	int value;
+	int len = 0;
 
 	cmd = attr - mtk_auxadc_attrs;
 	buf[0] = '\0';
@@ -341,10 +347,12 @@ static ssize_t mtk_auxadc_show(struct device *dev,
 			256, "==== Channel Dump End ====\n");
 		break;
 	case AUXADC_CHANNEL:
-		snprintf(buf + strlen(buf), 256, "%d (%s)\n",
+		len = snprintf(buf + strlen(buf), 256, "%d (%s)\n",
 				auxadc_intf->dbg_chl,
 				auxadc_intf->
 				channel_name[auxadc_intf->dbg_chl]);
+		if (len < 0)
+			return len;
 		break;
 	case AUXADC_VALUE:
 		value = auxadc_intf->ops->

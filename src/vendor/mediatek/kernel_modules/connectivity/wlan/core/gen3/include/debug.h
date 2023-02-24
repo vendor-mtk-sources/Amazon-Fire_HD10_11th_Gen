@@ -83,6 +83,10 @@ extern int get_logtoomuch_enable(void);
 
 #define DBG_ALL_MODULE_IDX      0xFFFFFFFF
 
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+#define MINERVA_WIFI_GROUP_ID	"30pfp83p"
+#define MINERVA_WIFI_SCHEMA_ID	"ir04/2/03330400"
+#endif
 /*******************************************************************************
 *                             D A T A   T Y P E S
 ********************************************************************************
@@ -431,11 +435,6 @@ VOID wlanPktStatusDebugTraceInfoIP(UINT_8 status, UINT_8 eventType, UINT_8 ucIpP
 	, PUINT_8 pucPkt);
 VOID wlanPktStatusDebugTraceInfo(UINT_8 status, UINT_8 eventType
 	, UINT_16 u2EtherType, UINT_8 ucIpProto, UINT_16 u2IpId, UINT_16 u2ArpOpCode, PUINT_8 pucPkt);
-#endif
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-extern int minerva_log_counter_to_vitals(android_LogPriority priority,
-		const char *source, const char *key,
-		long counter_value, const char *metadata);
 #endif
 /*******************************************************************************
 *                              F U N C T I O N S

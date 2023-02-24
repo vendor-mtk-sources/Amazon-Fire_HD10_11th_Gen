@@ -46,10 +46,6 @@
 #include <platform/mt_pmic.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
-#include <linux/amzn_metricslog.h>
-#endif
-
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -296,10 +292,6 @@ static void lcm_power_manager_lock(int);
 static unsigned int get_lcm_id(void);
 static void lcm_set_gpio_output(unsigned int GPIO, unsigned int output);
 static void push_table(struct LCM_setting_table *table, unsigned int count, unsigned char force_update);
-
-#if defined(CONFIG_AMZN_METRICS_LOG)
-static char metric_buf[128];
-#endif
 
 /*
 * 1. export function
@@ -792,6 +784,13 @@ static void lcm_resume(void)
 		"%s:lcd:resume=1;CT;1:NR", __func__);
 	log_to_metrics(ANDROID_LOG_INFO, "lcd", metric_buf);
 #endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	minerva_metrics_log(metric_buf, 512, "%s:%s:100:%s,%s,%s,%s,lcm_state=lcm_resume;SY,"
+			"ESD_Recovery=0;IN:us-east-1",
+			METRICS_LCD_GROUP_ID, METRICS_LCD_SCHEMA_ID,
+			PREDEFINED_ESSENTIAL_KEY, PREDEFINED_MODEL_KEY,
+			PREDEFINED_TZ_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
+#endif
 	lcm_power_manager_lock(LCM_ON2);
 }
 
@@ -802,6 +801,13 @@ static void lcm_suspend(void)
 	snprintf(metric_buf, sizeof(metric_buf),
 		"%s:lcd:suspend=1;CT;1:NR", __func__);
 	log_to_metrics(ANDROID_LOG_INFO, "lcd", metric_buf);
+#endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	minerva_metrics_log(metric_buf, 512, "%s:%s:100:%s,%s,%s,%s,lcm_state=lcm_suspend;SY,"
+			"ESD_Recovery=0;IN:us-east-1",
+			METRICS_LCD_GROUP_ID, METRICS_LCD_SCHEMA_ID,
+			PREDEFINED_ESSENTIAL_KEY, PREDEFINED_MODEL_KEY,
+			PREDEFINED_TZ_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
 #endif
 	lcm_power_manager_lock(LCM_DSB);
 }

@@ -2759,11 +2759,10 @@ VOID aisFsmRunEventJoinComplete(IN struct _ADAPTER_T *prAdapter, IN struct _MSG_
 	cnmMemFree(prAdapter, prMsgHdr);
 
 }				/* end of aisFsmRunEventJoinComplete() */
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 	IN P_STA_RECORD_T prStaRec, UINT_8 bConnect)
-
 {
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 	UINT_8 key_str[2] = {'S','\0'};
 	UINT_8 metadata_str[128];
 	UINT_16 metadata;
@@ -2771,7 +2770,6 @@ void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 	UINT_16 metadata2;
 	int ret = -1;
 	int minerva_ret = -1;
-	uint8_t metadata_str2[128];
 
 	DEBUGFUNC("aisNotifyAutoReconnectMetic()");
 	if (prAisBssInfo == NULL || prStaRec == NULL) {
@@ -2779,43 +2777,37 @@ void aisNotifyAutoReconnectMetic(IN P_BSS_INFO_T prAisBssInfo,
 			"aisNotifyAutoReconnectMetic() exception\n");
 		return;
 	}
-
+	DBGLOG(AIS, TRACE, "Ais reconnect metrics.\n");
 	metadata = prAisBssInfo->u2DeauthReason;
 	metadata1 = prAisBssInfo->ucPrimaryChannel;
 	metadata2 = prStaRec->u2ReasonCode;
 	kalMemSet(metadata_str, 0x00, 128);
-	kalMemSet(metadata_str2, 0x00, 128);
 	if (bConnect == TRUE) {
 		key_str [0]= 'S';
-		sprintf(metadata_str,
-			"!{\"d\"#{\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"}}", metadata, metadata1);
-		sprintf(metadata_str2,
-			"metadata=%d;SY,metadata1=%d;SY:", metadata, metadata1);
+		ret = sprintf(metadata_str,
+			"\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"", metadata, metadata1);
 	}
 	else {
 		key_str [0]= 'F';
-		sprintf(metadata_str,
-			"!{\"d\"#{\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"$\"metadata2\"#\"%d\"}}",
-			metadata, metadata1, metadata2);
-		sprintf(metadata_str2,
-			"metadata=%d;SY,metadata1=%d;SY,metadata2=%d;SY:",
+		ret = sprintf(metadata_str,
+			"\"metadata\"#\"%d\"$\"metadata1\"#\"%d\"$\"metadata2\"#\"%d\"",
 			metadata, metadata1, metadata2);
 	}
-
-	ret = log_counter_to_vitals(ANDROID_LOG_INFO,
-		"Kernel vitals", "wifiKDM", "conn-num-autoreconnects",
-		key_str, 1, "count", metadata_str, VITALS_NORMAL);
-	if (ret)
+	if (ret < 0) {
 		DBGLOG(AIS, ERROR,
-			"log_counter_to_vitals fail: auto reconnect reason = %d %d\n",
-			metadata,ret);
-	minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "conn-num-autoreconnects", key_str, 1, metadata_str2);
+			"sprintf metadata_str failed, ret:%d\n", ret);
+		return;
+	}
+	minerva_ret = minerva_timer_to_vitals(ANDROID_LOG_INFO,
+					MINERVA_WIFI_GROUP_ID, MINERVA_WIFI_SCHEMA_ID,
+					"Kernel vitals", "wifiKDM", "conn-num-autoreconnects",
+					key_str, (u32)1, "count", VITALS_NORMAL, metadata_str, NULL);
 	if (minerva_ret)
 		DBGLOG(AIS, ERROR,
-			"minerva_log_counter_to_vitals fail: auto reconnect reason = %d %d\n",
+			"minerva_timer_to_vitals fail: auto reconnect reason = %d %d\n",
 			metadata, minerva_ret);
-}
 #endif
+}
 
 
 enum _ENUM_AIS_STATE_T aisFsmJoinCompleteAction(IN struct _ADAPTER_T *prAdapter, IN struct _MSG_HDR_T *prMsgHdr)

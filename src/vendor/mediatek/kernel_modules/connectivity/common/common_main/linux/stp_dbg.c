@@ -507,45 +507,23 @@ static _osal_inline_ INT32 stp_dbg_core_dump_reset(P_WCN_CORE_DUMP_T dmp, UINT32
 	return 0;
 }
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-int minerva_log_counter_to_vitals(android_LogPriority priority,
-		const char *source, const char *key,
-		long counter_value, const char *metadata)
-{
-	char str[512];
-	const char *domain = "AmazonMinervaLoggerClient";
-	const char *minerva_wifi_predefined = "30pfp83p:xvb0/2/05330400:100:"
-		"_softwareVersion=;SY,_buildType=;SY,_platform=;SY,_timeZone=;"
-		"SY,_countryOfResidence=;SY,_otaGroupName=;SY,_deviceId=;SY";
-
-	if (metadata == NULL)
-		snprintf(str, 512,
-			"%s,operation=%s;SY,sum=%d;FL,key=%s;SY:",
-			minerva_wifi_predefined, source, counter_value, key);
-	else
-		snprintf(str, 512,
-			"%s,operation=%s;SY,sum=%d;FL,key=%s;SY,%s",
-			minerva_wifi_predefined, source, counter_value, key, metadata);
-	return log_to_metrics(priority, domain, str);
-}
-EXPORT_SYMBOL(minerva_log_counter_to_vitals);
-#endif
 
 VOID notify_fwk_chip_reset(VOID)
 {
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+#define MINERVA_WIFI_GROUP_ID	"30pfp83p"
+#define MINERVA_WIFI_SCHEMA_ID	"ir04/2/03330400"
 	ENUM_STP_FW_ISSUE_TYPE issue_type;
 	UINT32 from_host = 0;
 	UINT32 drv_type;
 	UINT32 fwIsr, fwRrq, fwTaskId;
-	int ret = -1;
 	UINT32 len = 0;
 	INT8 *c_drv_type = NULL;
 	INT8 *c_sub_type = NULL;
 	UINT8 assert_info[16];
 	UINT8 metadata_str[128];
 	int minerva_ret = -1;
-	UINT8 metadata_str2[128];
+	int ret = -1;
 	PUINT8 pDtr = NULL;
 	PUINT8 pbuf = "QA echo assert test from wmtdbg";
 	issue_type = g_stp_dbg_cpupcr->issue_type;
@@ -556,7 +534,6 @@ VOID notify_fwk_chip_reset(VOID)
 
 	osal_memset(&assert_info[0], 0, 16);
 	osal_memset(&metadata_str[0], 0, 128);
-	osal_memset(&metadata_str2[0], 0, 128);
 
 	STP_DBG_PR_INFO("in %s, start\n", __func__);
 
@@ -694,20 +671,17 @@ VOID notify_fwk_chip_reset(VOID)
 		assert_info[4] = '\0';
 	}
 
-	sprintf(metadata_str,
-			"!{\"d\"#{\"metadata\"#\"%s\"$\"metadata1\"#\"%s\"$\"metadata2\"#\"%s\"}}",
+	ret = sprintf(metadata_str,
+			"\"metadata\"#\"%s\"$\"metadata1\"#\"%s\"$\"metadata2\"#\"%s\"",
 			from_host ? "DRV" : "FW", c_sub_type, assert_info);
-
-	ret = log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel vitals", "wifiKDM", "conn-num-chipreset",
-				     c_drv_type, (u32)1, "count", metadata_str, VITALS_NORMAL);
-	if (ret)
-	       STP_DBG_PR_ERR("log_counter_to_vitals: fails in Key = %s metadata = %s %d\n",c_drv_type, metadata_str, ret);
-	else
-		STP_DBG_PR_DBG("log_counter_to_vitals: ok in Key = %s, sub_key = %s, metadata = %s\n",
-		c_drv_type, c_sub_type, metadata_str);
-	sprintf(metadata_str2,
-		"metadata=%s;SY:", from_host ? "DRV" : "FW");
-	minerva_ret = minerva_log_counter_to_vitals(ANDROID_LOG_INFO, "conn-num-chipreset", c_drv_type, 1, metadata_str2);
+	if (ret < 0) {
+		STP_DBG_PR_ERR("sprintf metadata_str failed, ret:%d", ret);
+		return;
+	}
+	minerva_ret = minerva_timer_to_vitals(ANDROID_LOG_INFO,
+					MINERVA_WIFI_GROUP_ID, MINERVA_WIFI_SCHEMA_ID,
+					"Kernel vitals", "wifiKDM", "conn-num-chipreset",
+					c_drv_type, (u32)1, "count", VITALS_NORMAL, metadata_str, NULL);
 	if (minerva_ret)
 		STP_DBG_PR_ERR("minerva debug: chip reset, metadata_str = %s", metadata_str);
 #endif

@@ -52,6 +52,9 @@ static int metrics_init;
 #define LOGGER_ENTRY_MAX_PAYLOAD 4076
 #define AMAZON_METRICS_BUF_SIZE (16 * 1024)
 #define AMAZON_VITALS_BUF_SIZE (128 * 1024)
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+#define MINERVA_LOG_MAX_SIZE 4096
+#endif
 
 /**
  * logger_entry (v1 version)
@@ -155,6 +158,7 @@ static int logger_kernel_write(struct ring_buffer *buf,
 	return 0;
 }
 
+#ifdef CONFIG_AMZN_METRICS_LOG
 /**
  * log_to_metrics - add a metric message to metrics log buffer
  * @priority: the Android priority of the message
@@ -194,6 +198,77 @@ int log_to_metrics(enum android_log_priority priority,
 	return ret;
 }
 EXPORT_SYMBOL(log_to_metrics);
+#endif /* CONFIG_AMZN_METRICS_LOG */
+
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+/**
+ * minerva_metrics_log - add a minerva message to metrics log buffer
+ * @buf:         the buf to save minerva log
+ * @max_size:    the max log size (4K)
+ * @fmt:	 the Minerva log message
+ * @...:	 a variable number of arguments specified in @fmt
+ * @Returns:     0 on success, error code on failurel
+ */
+int minerva_metrics_log(char *buf, int max_size, char *fmt, ...)
+{
+	char *minerva_metrics_buf = buf;
+	int ret = 0;
+	va_list args;
+	char *p;
+	const char *domain = "Minerva_Metrics_Log";
+	enum android_log_priority priority = ANDROID_LOG_INFO;
+	struct iovec vec[3];
+
+	/* check minerva log size. It limits to 4K  */
+	if (max_size > MINERVA_LOG_MAX_SIZE) {
+		pr_err("Your Minerva log's length is more than 4K!\n");
+		return -EINVAL;
+	}
+
+	if (metrics_init == 0 || minerva_metrics_buf == NULL) {
+		pr_err("Metrics has not init or your log buf is a nullptr.\n");
+		return -EINVAL;
+	}
+
+	memset(minerva_metrics_buf, 0, max_size);
+
+	va_start(args, fmt);
+	ret = vsnprintf(minerva_metrics_buf, max_size, fmt, args);
+	va_end(args);
+
+	/* check if its vsnprintf is successful  */
+	if (ret < 0) {
+		pr_err("Minerva log vsnprintf fail\n");
+		return -EINVAL;
+	}
+
+	/* check if overflow */
+	if (ret >= max_size) {
+		pr_err("Your log is overflow, part of log will be lost.\n");
+		return -EINVAL;
+	}
+
+	p = minerva_metrics_buf;
+
+	while (*p != '\0') {
+		if (' ' == *p)
+			*p = '_';
+		p++;
+	}
+
+	vec[0].iov_base = (unsigned char *)&priority;
+	vec[0].iov_len  = 1;
+
+	vec[1].iov_base = (void *)domain;
+	vec[1].iov_len  = strlen(domain) + 1;
+
+	vec[2].iov_base = (void *)minerva_metrics_buf;
+	vec[2].iov_len  = strlen(minerva_metrics_buf) + 1;
+
+	return logger_kernel_write(metrics_logger->buf, vec, 3);
+}
+EXPORT_SYMBOL(minerva_metrics_log);
+#endif /* CONFIG_AMZN_MINERVA_METRICS_LOG */
 
 static int log_to_vitals(enum android_log_priority priority,
 			 const char *domain, const char *log_msg)
@@ -220,6 +295,7 @@ static int log_to_vitals(enum android_log_priority priority,
 	return ret;
 }
 
+#ifdef CONFIG_AMZN_METRICS_LOG
 /**
  * log_counter_to_vitals - add a counter message to vitals log buffer
  * @priority:	the Android priority of the message
@@ -300,6 +376,169 @@ int log_timer_to_vitals(enum android_log_priority priority,
 	return log_to_vitals(priority, domain, str);
 }
 EXPORT_SYMBOL(log_timer_to_vitals);
+#endif /* CONFIG_AMZN_METRICS_LOG */
+
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+/**
+ * minerva_counter_to_vitals - add a counter message to Minerva vitals log buffer
+ * @priority:   the Android priority of the message
+ * @group_id:   the Group Id of vitals Minerva
+ * @schema_id:  the Schema Id of vitals Minerva
+ * @domain:     the domain of this message belong to
+ * @program:    the vital record category name
+ * @source:     the vital name
+ * @key:        the counter name
+ * @counter_value:the counter value
+ * @metadata:   the metadata info
+ * @type:       the type of vitals
+ * @Returns:    0 on success, error code on failure
+ */
+int minerva_counter_to_vitals(enum android_log_priority priority,
+			const char *group_id, const char *schema_id,
+			const char *domain, const char *program,
+			const char *source, const char *key,
+			long counter_value, const char *unit,
+			const char *metadata, vitals_type type,
+			const char *dimensions, const char *annotations)
+{
+	char str[VITAL_ENTRY_MAX_PAYLOAD];
+	char metadata_msg[VITAL_ENTRY_MAX_PAYLOAD];
+	size_t metadata_length = 0;
+
+	/*
+	 * metadata format metadata=[(metadata)]!{
+	 * "d"#{"groupId"$"(group_id)"#"schemaId"$"(schema_id)"
+	 * [(dimensions)]}["m"#{(annotations)}]}
+	 */
+	if (metadata && strlen(metadata))
+		metadata_length += snprintf(metadata_msg,
+			VITAL_ENTRY_MAX_PAYLOAD, ",metadata=%s!{", metadata);
+	else
+		metadata_length += snprintf(metadata_msg,
+			VITAL_ENTRY_MAX_PAYLOAD, ",metadata=!{");
+
+	if (dimensions && strlen(dimensions))
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"\"d\"#{\"groupId\"#\"%s\"$\"schemaId\"#\"%s\"$%s}",
+			group_id, schema_id, dimensions);
+	else
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"\"d\"#{\"groupId\"#\"%s\"$\"schemaId\"#\"%s\"}",
+			group_id, schema_id);
+
+	if (annotations && strlen(annotations))
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"$\"m\"#{%s}};DV;1", annotations);
+	else
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"};DV;1");
+
+	/*
+	 * format (program):(source):type=(type);DV;1,
+	 * [key=(key);DV;1,]counter=(counter_value);CT;1,
+	 * unit=(unit);DV;1,metadata=(metadata_msg);DV;1:HI
+	 */
+	if (key) {
+		snprintf(str, VITAL_ENTRY_MAX_PAYLOAD,
+			"%s:%s:type=%d;DV;1,key=%s;DV;1,"
+			"counter=%ld;CT;1,unit=%s;DV;1%s:HI",
+			program, source,
+			type, key, counter_value, unit,
+			metadata_msg);
+	} else {
+		snprintf(str, VITAL_ENTRY_MAX_PAYLOAD,
+			"%s:%s:type=%d;DV;1,"
+			"counter=%ld;CT;1,unit=%s;DV;1%s:HI",
+			program, source, type,
+			counter_value, unit,
+			metadata_msg);
+	}
+
+	return log_to_vitals(priority, domain, str);
+}
+EXPORT_SYMBOL(minerva_counter_to_vitals);
+
+/**
+ * minerva_timer_to_vitals - add a timer message to minerva vitals log buffer
+ * @priority:   the Android priority of the message
+ * @group_id:   the Group Id of vitals Minerva
+ * @schema_id:  the Schema Id of vitals Minerva
+ * @domain:     the domain of this message belong to
+ * @program:    the vital record category name
+ * @source:     the vital name
+ * @key:        the timer name
+ * @timer_value:the timer value
+ * @unit:       unit for the timer
+ * @type:       the type of vitals.
+ * @Returns:    0 on success, error code on failure
+ */
+int minerva_timer_to_vitals(enum android_log_priority priority,
+			const char *group_id, const char *schema_id,
+			const char *domain, const char *program,
+			const char *source, const char *key,
+			long timer_value, const char *unit, vitals_type type,
+			const char *dimensions, const char *annotations)
+{
+	char str[VITAL_ENTRY_MAX_PAYLOAD];
+	char metadata_msg[VITAL_ENTRY_MAX_PAYLOAD];
+	size_t metadata_length = 0;
+
+	/*
+	 * metadata format metadata=!{"d"#{
+	 * "groupId"$"(group_id)"#"schemaId"$"(schema_id)"
+	 * [(dimensions)]}["m"#{(annotations)}]}
+	 */
+	if (dimensions && strlen(dimensions))
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			",metadata=!{"
+			"\"d\"#{\"groupId\"#\"%s\"$\"schemaId\"#\"%s\"$%s}",
+			group_id, schema_id, dimensions);
+	else
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			",metadata=!{"
+			"\"d\"#{\"groupId\"#\"%s\"$\"schemaId\"#\"%s\"}",
+			group_id, schema_id);
+
+	if (annotations && strlen(annotations))
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"$\"m\"#{%s}};DV;1", annotations);
+	else
+		metadata_length += snprintf(&metadata_msg[metadata_length],
+			VITAL_ENTRY_MAX_PAYLOAD - metadata_length,
+			"};DV;1");
+
+	/*
+	 * format (program):(source):type=(type);DV;1,
+	 * [key=(key);DV;1,]timer=(timer_value);TI;1,
+	 * unit=(unit);DV;1,metadata=(metadata_msg);DV;1:HI
+	 */
+	if (key) {
+		snprintf(str, VITAL_ENTRY_MAX_PAYLOAD,
+			"%s:%s:type=%d;DV;1,key=%s;DV;1,"
+			"timer=%ld;TI;1,unit=%s;DV;1%s:HI",
+			program, source, type,
+			key, timer_value, unit,
+			metadata_msg);
+	} else {
+		snprintf(str, VITAL_ENTRY_MAX_PAYLOAD,
+			"%s:%s:type=%d;DV;1,"
+			"timer=%ld;TI;1,unit=%s;DV;1%s:HI",
+			program, source, type,
+			timer_value, unit,
+			metadata_msg);
+	}
+
+	return log_to_vitals(priority, domain, str);
+}
+EXPORT_SYMBOL(minerva_timer_to_vitals);
+#endif /* CONFIG_AMZN_MINERVA_METRICS_LOG */
 
 static struct amazon_logger *get_log_from_minor(int minor)
 {

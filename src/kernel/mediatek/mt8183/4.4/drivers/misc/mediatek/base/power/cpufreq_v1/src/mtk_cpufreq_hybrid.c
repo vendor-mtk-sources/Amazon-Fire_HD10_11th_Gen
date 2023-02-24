@@ -88,6 +88,9 @@ static struct cpu_dvfs_log_box log_box_parsed[1 + MAX_LOG_FETCH];
 
 void parse_time_log_content(unsigned int time_stamp_l_log, unsigned int time_stamp_h_log, int idx)
 {
+	if (idx < 0)
+		return;
+
 	if (time_stamp_h_log == 0 && time_stamp_l_log == 0)
 		log_box_parsed[idx].time_stamp = 0;
 
@@ -100,6 +103,9 @@ void parse_log_content(unsigned int *local_buf, int idx)
 	struct cpu_dvfs_log *log_box = (struct cpu_dvfs_log *)local_buf;
 	struct mt_cpu_dvfs *p;
 	int i;
+
+	if (idx < 0)
+		return;
 
 	for_each_cpu_dvfs(i, p) {
 		log_box_parsed[idx].cluster_opp_cfg[i].limit_idx = log_box->cluster_opp_cfg[i].limit;
@@ -189,7 +195,7 @@ int Ripi_cpu_dvfs_thread(void *data)
 
 			if (num_log == 1)
 				j = log_box_parsed[0].cluster_opp_cfg[i].freq_idx;
-			else {
+			else if (num_log > 1) {
 				tf_sum = 0;
 				for (j = num_log - 1; j >= 1; j--) {
 					buf_freq = cpu_dvfs_get_freq_by_idx(p,
@@ -213,7 +219,7 @@ int Ripi_cpu_dvfs_thread(void *data)
 			/* Avoid memory issue */
 			if (p->mt_policy && p->mt_policy->governor &&
 				p->mt_policy->governor_enabled &&
-				(p->mt_policy->cpu < 10) && (p->mt_policy->cpu >= 0)) {
+				(p->mt_policy->cpu < 8) && (p->mt_policy->cpu >= 0)) {
 				int cid;
 
 				previous_limit = p->idx_opp_ppm_limit;
@@ -271,7 +277,7 @@ int dvfs_to_spm2_command(u32 cmd, struct cdvfs_data *cdvfs_d)
 #define OPT				(0) /* reserve for extensibility */
 #define DVFS_D_LEN		(4) /* # of cmd + arg0 + arg1 + ... */
 	unsigned int len = DVFS_D_LEN;
-	int ack_data;
+	int ack_data = 0;
 	unsigned int ret = 0;
 
 	/* cpufreq_ver("#@# %s(%d) cmd %x\n", __func__, __LINE__, cmd); */

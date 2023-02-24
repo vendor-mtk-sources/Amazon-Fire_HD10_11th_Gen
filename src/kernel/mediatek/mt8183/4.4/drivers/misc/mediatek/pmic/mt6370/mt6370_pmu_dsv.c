@@ -239,6 +239,9 @@ static int mt6370_dsv_enable(struct regulator_dev *rdev)
 {
 	struct mt6370_pmu_dsv_data *info = rdev_get_drvdata(rdev);
 
+	if (!info)
+		return -EINVAL;
+
 	pr_info("%s, id = %d\n", __func__, rdev->desc->id);
 	return mt6370_pmu_reg_set_bit(info->chip,
 		mt6370_dsv_regulators[rdev->desc->id].enable_reg,

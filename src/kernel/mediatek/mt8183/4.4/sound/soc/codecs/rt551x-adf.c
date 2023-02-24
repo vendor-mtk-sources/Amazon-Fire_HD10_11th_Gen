@@ -28,11 +28,11 @@
 #include <sound/soc-dapm.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-#ifdef CONFIG_AMAZON_METRICS_LOG
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #include  <linux/metricslog.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include  <linux/amzn_metricslog.h>
 #endif
 
@@ -56,10 +56,13 @@ static int rt551x_set_dsp_mode(struct snd_soc_codec *codec, int DSPMode);
 static struct rt551x_priv *rt551x_pointer;
 static u32 hw_analog_gain = 0xe, hw_digital_gain = 0x892f;
 
-#if defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #define RT551X_METRIC_UPLOAD_PERIOD (60 * 60 * 12)
-#define RT551X_METRICS_STR_LEN (128)
 static struct delayed_work rt551x_metrics_upload_work;
+#endif
+
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#define RT551X_METRICS_STR_LEN (512)
 #endif
 
 #define PRIO_TWO_BIGS_TWO_LITTLES_MAX_FREQ 11
@@ -1681,6 +1684,9 @@ static void rt551x_handler_work(struct work_struct *work)
 {
 	int iVdIdVal, wdg_status = 0;
 	struct rt551x_priv *rt551x = container_of(work, struct rt551x_priv, handler_work);
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	char minerva_buf[RT551X_METRICS_STR_LEN];
+#endif
 
 	regcache_cache_bypass(rt551x->regmap, true);
 	regmap_read(rt551x->regmap, RT551X_VENDOR_ID2, &iVdIdVal);
@@ -1700,11 +1706,35 @@ static void rt551x_handler_work(struct work_struct *work)
 
 		log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", "voice_dsp:def:DSP_IRQ=1;CT;1:NR");
 #endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+		minerva_counter_to_vitals(ANDROID_LOG_INFO,
+				VITALS_DSP_GROUP_ID, VITALS_DSP_COUNTER_SCHEMA_ID,
+				"Kernel", "Kernel", "RT5514_DSP_metrics_count",
+				"DSP_IRQ", 1, "count",
+				NULL, VITALS_NORMAL, NULL, NULL);
+		minerva_metrics_log(minerva_buf, RT551X_METRICS_STR_LEN,
+				"%s:%s:100:%s,%s,%s,DSP_IRQ=true;BO,DSP_RESET=false;BO,"
+				"DSP_WDT=false;BO,DSP_DATA_PROCESS_BEGIN=false;BO:us-east-1",
+				METRICS_DSP_GROUP_ID, METRICS_DSP_VOICE_SCHEMA_ID,
+				PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
+#endif
 	} else {
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 		log_counter_to_vitals(ANDROID_LOG_INFO, "Kernel", "Kernel", "RT5514_DSP_metrics_count", "DSP_Watchdog", 1, "count", NULL, VITALS_NORMAL);
 
 		log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", "voice_dsp:def:DSP_Watchdog=1;CT;1:NR");
+#endif
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+		minerva_counter_to_vitals(ANDROID_LOG_INFO,
+				VITALS_DSP_GROUP_ID, VITALS_DSP_COUNTER_SCHEMA_ID,
+				"Kernel", "Kernel", "RT5514_DSP_metrics_count",
+				"DSP_Watchdog", 1, "count",
+				NULL, VITALS_NORMAL, NULL, NULL);
+		minerva_metrics_log(minerva_buf, RT551X_METRICS_STR_LEN,
+				"%s:%s:100:%s,%s,%s,DSP_IRQ=false;BO,DSP_RESET=false;BO,"
+				"DSP_WDT=true;BO,DSP_DATA_PROCESS_BEGIN=false;BO:us-east-1",
+				METRICS_DSP_GROUP_ID, METRICS_DSP_VOICE_SCHEMA_ID,
+				PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY);
 #endif
 		schedule_work(&rt551x->watchdog_work);
 	}
@@ -2130,7 +2160,7 @@ static int adfDbgWriteFunc(uintptr_t dest, uintptr_t src, int size)
 	return rt551x_spi_burst_write((unsigned int)dest, (u8 *)src, size);
 }
 
-#if defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 static void *rt551x_dsp_log_fliter(char *logLine)
 {
 	static uint32_t freqIndex;
@@ -2171,7 +2201,9 @@ static void rt551x_do_metrics_upload_work(struct work_struct *work)
 	uint32_t *freqTs = NULL;
 	char metricsLogBuf[RT551X_METRICS_STR_LEN] = {'\0'};
 	char *cliCmds[2] = {"ctrl power ", "ctrl power 1 "};
+#ifdef CONFIG_AMZN_METRICS_LOG
 	int ret = 0;
+#endif
 	freqTs = (uint32_t *)adf_debug_query(0, cliCmds, ARRAY_SIZE(cliCmds), rt551x_dsp_log_fliter);
 	if (freqTs) {
 		/*
@@ -2185,6 +2217,7 @@ static void rt551x_do_metrics_upload_work(struct work_struct *work)
 		 * [221228704]<I>[CTRL_CLI]   1     20000   74%  1385753
 		 * [221228705]<I>[CTRL_CLI]   2      1250   25%  474054
 		 */
+#ifdef CONFIG_AMZN_METRICS_LOG
 		snprintf(metricsLogBuf, RT551X_METRICS_STR_LEN,
 				"voice_dsp:def:freq_run_ts=%d;CT;1,freq_vad_ts=%d;CT;1:NR",
 				(*freqTs + *(freqTs + 1)) / 1000,
@@ -2192,6 +2225,16 @@ static void rt551x_do_metrics_upload_work(struct work_struct *work)
 		ret = log_to_metrics(ANDROID_LOG_INFO, "voice_dsp", metricsLogBuf);
 		if (ret)
 			pr_err("log_to_metrics: fails to upload dsp freq duration %d\n", ret);
+#endif
+
+#ifdef CONFIG_AMZN_MINERVA_METRICS_LOG
+			minerva_metrics_log(metricsLogBuf, RT551X_METRICS_STR_LEN,
+					"%s:%s:100:%s,%s,%s,FREQ_IDLE_TS=%d;IN,"
+					"FREQ_RUN_TS=%d;IN,FREQ_VAD_TS=%d;IN:us-east-1",
+					METRICS_DSP_GROUP_ID, METRICS_DSP_FREQ_SCHEMA_ID,
+					PREDEFINED_ESSENTIAL_KEY, PREDEFINED_DEVICE_ID_KEY, PREDEFINED_DEVICE_LANGUAGE_KEY,
+					*freqTs / 1000, *(freqTs + 1) / 1000, *(freqTs + 2) / 1000);
+#endif
 	}
 	schedule_delayed_work(&rt551x_metrics_upload_work, msecs_to_jiffies(RT551X_METRIC_UPLOAD_PERIOD * 1000));
 }
@@ -2304,7 +2347,7 @@ static int rt551x_i2c_probe(struct i2c_client *i2c,
 	ret = adf_debug_fs_init(adfDbgReadFunc, adfDbgWriteFunc);
 	if (ret < 0)
 		printk("failed to add adf debugfs files\n");
-#if defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 	/* init metrics upload work*/
 	INIT_DELAYED_WORK(&rt551x_metrics_upload_work, rt551x_do_metrics_upload_work);
 	schedule_delayed_work(&rt551x_metrics_upload_work, msecs_to_jiffies(RT551X_METRIC_UPLOAD_PERIOD * 1000));

@@ -10,7 +10,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-
 #include <linux/timer.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -21,11 +20,11 @@
 #include <linux/of_gpio.h>
 #include <linux/gpio.h>
 #endif
-#ifdef CONFIG_AMAZON_METRICS_LOG
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 #include <linux/metricslog.h>
 #endif
 
-#ifdef CONFIG_AMZN_METRICS_LOG
+#if defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG)
 #include <linux/amzn_metricslog.h>
 #endif
 
@@ -180,7 +179,7 @@ char *accdet_report_string[] = {
 	"Line_out_device"
 };
 
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 static char *accdet_metrics_cable_string[3] = {
 	"NOTHING",
 	"HEADSET",
@@ -198,10 +197,10 @@ static int s_eint_accdet_sync_flag;
 static int s_4_key_efuse_flag;
 #endif
 static int s_button_press_debounce = 0x400;
-static int s_pre_status = PLUG_OUT;
+static unsigned int s_pre_status = PLUG_OUT;
 static int s_pre_state_swctrl;
-static int s_accdet_status = PLUG_OUT;
-static int s_cable_type = NO_DEVICE;
+static unsigned int s_accdet_status = PLUG_OUT;
+static unsigned int s_cable_type = NO_DEVICE;
 
 static struct cdev *accdet_cdev;
 static struct class *accdet_class;
@@ -393,34 +392,51 @@ static int accdet_get_dts_data(void)
 {
 	struct device_node *node = NULL;
 	int debounce[8] = { 0 };
-	#ifdef CONFIG_FOUR_KEY_HEADSET
+#ifdef CONFIG_FOUR_KEY_HEADSET
 	int four_key[5] = { 0 };
-	#else
+#else
 	int three_key[4] = { 0 };
-	#endif
+#endif
 	int ret = 0;
 
 	ACCDET_INFO("[accdet_get_dts_data]Start..");
 	node = of_find_matching_node(node, accdet_of_match);
 	if (node) {
 #if defined(CONFIG_MOISTURE_EXTERNAL_SUPPORT) || defined(CONFIG_MOISTURE_INTERNAL_SUPPORT)
-		of_property_read_u32(node, "moisture-water-r", &water_r);
+		ret = of_property_read_u32(node, "moisture-water-r", &water_r);
+		if (ret)
+			ACCDET_ERROR("[%s]can't find moisture-water-r.", __func__);
 #ifdef CONFIG_MOISTURE_EXTERNAL_SUPPORT
-		of_property_read_u32(node, "moisture-external-r", &external_r);
+		ret = of_property_read_u32(node, "moisture-external-r", &external_r);
+		if (ret)
+			ACCDET_ERROR("[%s]can't find moisture-external-r.", __func__);
 		ACCDET_INFO("[accdet_get_dts_data]MOISTURE_EXTERNAL_SUPPORT moisture-external-r = %d, water_r = %d\n",
 		     external_r, water_r);
 #endif
 #ifdef CONFIG_MOISTURE_INTERNAL_SUPPORT
-		of_property_read_u32(node, "moisture-internal-r", &internal_r);
+		ret = of_property_read_u32(node, "moisture-internal-r", &internal_r);
+		if (ret)
+			ACCDET_ERROR("[%s]can't find moisture-internal-r.", __func__);
 		ACCDET_INFO("[accdet_get_dts_data]MOISTURE_INTERNAL_SUPPORT moisture-internal-r = %d, water_r = %d\n",
 		     internal_r, water_r);
 #endif
 #endif
-		of_property_read_u32(node, "accdet-mic-vol", &headset_dts_data.mic_bias_vol);
+		ret = of_property_read_u32(node, "accdet-mic-vol", &headset_dts_data.mic_bias_vol);
+		if (ret)
+			ACCDET_INFO("[%s]can't find accdet-mic-vol.", __func__);
 		/* for GPIO debounce */
-		of_property_read_u32(node, "accdet-plugout-debounce", &headset_dts_data.accdet_plugout_deb);
-		of_property_read_u32(node, "accdet-mic-mode", &headset_dts_data.accdet_mic_mode);
-		of_property_read_u32(node, "headset-eint-level-pol", &headset_dts_data.eint_level_pol);
+		ret = of_property_read_u32(node, "accdet-plugout-debounce", &headset_dts_data.accdet_plugout_deb);
+		if (ret)
+			ACCDET_INFO("[%s]can't find accdet-plugout-debounce.", __func__);
+
+		ret = of_property_read_u32(node, "accdet-mic-mode", &headset_dts_data.accdet_mic_mode);
+		if (ret)
+			ACCDET_INFO("[%s]can't find accdet-mic-mode.", __func__);
+
+		ret = of_property_read_u32(node, "headset-eint-level-pol", &headset_dts_data.eint_level_pol);
+		if (ret)
+			ACCDET_INFO("[%s]can't find headset-eint-level-pol.", __func__);
+
 #ifdef CONFIG_FOUR_KEY_HEADSET
 		ret = of_property_read_u32_array(node, "headset-four-key-threshold", four_key, ARRAY_SIZE(four_key));
 		if (!ret)
@@ -651,16 +667,20 @@ static void send_accdet_status_event(int cable, int status)
 
 static void send_key_event(int keycode, int flag)
 {
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	char buf[128];
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	char buf[512];
 	char *string = NULL;
+
+#endif
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+	int ret = 0;
 #endif
 	switch (keycode) {
 	case DW_KEY:
 		input_report_key(kpd_accdet_dev, KEY_VOLUMEDOWN, flag);
 		input_sync(kpd_accdet_dev);
 		ACCDET_DEBUG("[accdet][send_key_event]KEY_VOLUMEDOWN %d\n", flag);
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 		string = "KEY_VOLUMEDOWN";
 #endif
 		break;
@@ -668,7 +688,7 @@ static void send_key_event(int keycode, int flag)
 		input_report_key(kpd_accdet_dev, KEY_VOLUMEUP, flag);
 		input_sync(kpd_accdet_dev);
 		ACCDET_DEBUG("[accdet][send_key_event]KEY_VOLUMEUP %d\n", flag);
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 		string = "KEY_VOLUMEUP";
 #endif
 		break;
@@ -676,7 +696,7 @@ static void send_key_event(int keycode, int flag)
 		input_report_key(kpd_accdet_dev, KEY_PLAYPAUSE, flag);
 		input_sync(kpd_accdet_dev);
 		ACCDET_DEBUG("[accdet][send_key_event]KEY_PLAYPAUSE %d\n", flag);
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 		string = "KEY_PLAYPAUSE";
 #endif
 		break;
@@ -684,19 +704,26 @@ static void send_key_event(int keycode, int flag)
 		input_report_key(kpd_accdet_dev, KEY_VOICECOMMAND, flag);
 		input_sync(kpd_accdet_dev);
 		ACCDET_DEBUG("[accdet][send_key_event]KEY_VOICECOMMAND %d\n", flag);
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 		string = "KEY_VOICECOMMAND";
 #endif
 		break;
-#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
 	default:
 		string = "NOKEY";
 #endif
 	}
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	minerva_metrics_log(buf, 512, "%s:%s:100:%s,KEY=%s;SY,STATE=%d;IN:us-east-1",
+		METRICS_HEADSET_GROUP_ID, METRICS_HEADSET_KEY_SCHEMA_ID,
+		PREDEFINED_ESSENTIAL_KEY, string, flag);
+#endif
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	snprintf(buf, sizeof(buf),
+	ret = snprintf(buf, sizeof(buf),
 		"%s:jack:key=%s;DV;1,state=%d;CT;1:NR",
 			__func__, string, flag);
+	if (ret < 0)
+		ACCDET_ERROR("[%s] snprintf occur error", __func__);
 	log_to_metrics(ANDROID_LOG_INFO, "AudioJackEvent", buf);
 #endif
 }
@@ -915,8 +942,11 @@ static inline void check_cable_type(void)
  */
 static inline void headset_plug_out(void)
 {
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	char buf[512];
+#endif
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	char buf[128];
+	int ret = 0;
 #endif
 	send_accdet_status_event(s_cable_type, 0);
 	s_accdet_status = PLUG_OUT;
@@ -927,9 +957,16 @@ static inline void headset_plug_out(void)
 		ACCDET_INFO("[accdet]plug_out send key = %d release\n", g_cur_key);
 		g_cur_key = 0;
 	}
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	minerva_metrics_log(buf, 512, "%s:%s:100:%s,UNPLUGGED=true;BO,PLUGGED=false;BO,CABLE=NONE;SY:us-east-1",
+		METRICS_HEADSET_GROUP_ID, METRICS_HEADSET_JACK_SCHEMA_ID,
+		PREDEFINED_ESSENTIAL_KEY);
+#endif
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	snprintf(buf, sizeof(buf),
+	ret = snprintf(buf, sizeof(buf),
 		"%s:jack:unplugged=1;CT;1:NR", __func__);
+	if (ret < 0)
+		ACCDET_INFO("[%s] snprintf occur error", __func__);
 	log_to_metrics(ANDROID_LOG_INFO, "AudioJackEvent", buf);
 #endif
 	ACCDET_DEBUG("[accdet]set state in cable_type = NO_DEVICE\n");
@@ -1325,7 +1362,10 @@ static void accdet_work_callback(struct work_struct *work)
 {
 	unsigned int reg_val = 0;
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
-	char buf[128];
+	int ret = 0;
+#endif
+#if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG) || defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+	char buf[512];
 #endif
 	reg_val = 0;
 	wake_lock(&accdet_irq_lock);
@@ -1334,13 +1374,25 @@ static void accdet_work_callback(struct work_struct *work)
 
 	mutex_lock(&accdet_eint_irq_sync_mutex);
 	if (s_eint_accdet_sync_flag == 1) {
+#if defined(CONFIG_AMZN_MINERVA_METRICS_LOG) || defined(CONFIG_AMAZON_MINERVA_METRICS_LOG)
+		if (s_pre_status == PLUG_OUT) {
+			minerva_metrics_log(buf, 512,
+				"%s:%s:100:%s,UNPLUGGED=false;BO,"
+				"PLUGGED=true;BO,CABLE=%s;SY:us-east-1",
+				METRICS_HEADSET_GROUP_ID, METRICS_HEADSET_JACK_SCHEMA_ID,
+				PREDEFINED_ESSENTIAL_KEY,
+				accdet_metrics_cable_string[s_cable_type]);
+		}
+#endif
 #if defined(CONFIG_AMAZON_METRICS_LOG) || defined(CONFIG_AMZN_METRICS_LOG)
 		if (s_pre_status == PLUG_OUT) {
-			snprintf(buf, sizeof(buf),
+			ret = snprintf(buf, sizeof(buf),
 				"%s:jack:plugged=1;CT;1,state_%s=1;CT;1:NR",
 					__func__,
 					accdet_metrics_cable_string[
 					s_cable_type]);
+			if  (ret < 0)
+				ACCDET_INFO("[%s] snprintf occur error", __func__);
 			log_to_metrics(ANDROID_LOG_INFO, "AudioJackEvent", buf);
 		}
 #endif
@@ -2165,6 +2217,7 @@ static int dump_register(void)
 static int cat_register(char *buf)
 {
 	int i = 0;
+	int ret = 0;
 	char buf_temp[128] = { 0 };
 
 #ifdef CONFIG_HEADSET_SUPPORT_FIVE_POLE
@@ -2173,63 +2226,85 @@ static int cat_register(char *buf)
 
 #ifdef CONFIG_ACCDET_EINT_IRQ
 #ifdef CONFIG_ACCDET_SUPPORT_EINT0
-	sprintf(buf_temp, "[ACCDET_SUPPORT_EINT0][MODE_%d]dump_regs:\n",
+	ret = sprintf(buf_temp, "[ACCDET_SUPPORT_EINT0][MODE_%d]dump_regs:\n",
 		headset_dts_data.accdet_mic_mode);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 #elif defined CONFIG_ACCDET_SUPPORT_EINT1
-	sprintf(buf_temp, "[ACCDET_SUPPORT_EINT1][MODE_%d]dump_regs:\n",
+	ret = sprintf(buf_temp, "[ACCDET_SUPPORT_EINT1][MODE_%d]dump_regs:\n",
 		headset_dts_data.accdet_mic_mode);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 #elif defined CONFIG_ACCDET_SUPPORT_BI_EINT
-	sprintf(buf_temp, "[ACCDET_SUPPORT_BI_EINT][MODE_%d]dump_regs:\n",
+	ret = sprintf(buf_temp, "[ACCDET_SUPPORT_BI_EINT][MODE_%d]dump_regs:\n",
 		headset_dts_data.accdet_mic_mode);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 #else
 	strncat(buf, "[CONFIG_ACCDET_EINT_IRQ]Error!\n", 64);
 #endif
 #elif defined CONFIG_ACCDET_EINT
-	sprintf(buf_temp, "[ACCDET_EINT][MODE_%d]dump_regs:\n",
+	ret = sprintf(buf_temp, "[ACCDET_EINT][MODE_%d]dump_regs:\n",
 		headset_dts_data.accdet_mic_mode);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 #else
 	strncat(buf, "[NO_CONFIG_ACCDET_EINT_SUPPORT]Error!\n", 64);
 #endif
 
 	for (i = ACCDET_CON00; i <= ACCDET_CON28; i += 2) {/* accdet addr */
-		sprintf(buf_temp, "ADDR[0x%x]=0x%x\n", i, pmic_pwrap_read(i));
+		ret = sprintf(buf_temp, "ADDR[0x%x]=0x%x\n", i, pmic_pwrap_read(i));
+		if (ret < 0)
+			ACCDET_INFO("[%s] sprintf occur error", __func__);
 		strncat(buf, buf_temp, strlen(buf_temp));
 	}
 
-	sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
 		TOP_CON, pmic_pwrap_read(TOP_CON),
 		TOP_CKPDN_CON0, pmic_pwrap_read(TOP_CKPDN_CON0));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
-	sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
 		AUD_TOP_RST_CON0, pmic_pwrap_read(AUD_TOP_RST_CON0),
 		AUD_TOP_INT_CON0, pmic_pwrap_read(AUD_TOP_INT_CON0));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
-	sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
 		AUD_TOP_INT_MASK_CON0, pmic_pwrap_read(AUD_TOP_INT_MASK_CON0),
 		AUD_TOP_INT_STATUS0, pmic_pwrap_read(AUD_TOP_INT_STATUS0));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
-	sprintf(buf_temp, "0x%x)=0x%x, (0x%x)=0x%x, (0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "0x%x)=0x%x, (0x%x)=0x%x, (0x%x)=0x%x, (0x%x)=0x%x\n",
 		AUDENC_ANA_CON6, pmic_pwrap_read(AUDENC_ANA_CON6),
 		AUDENC_ANA_CON9, pmic_pwrap_read(AUDENC_ANA_CON9),
 		AUDENC_ANA_CON10, pmic_pwrap_read(AUDENC_ANA_CON10),
 		AUDENC_ANA_CON11, pmic_pwrap_read(AUDENC_ANA_CON11));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
-	sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
 		AUXADC_CON2, pmic_pwrap_read(AUXADC_CON2),
 		AUXADC_RQST0, pmic_pwrap_read(AUXADC_RQST0));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
-	sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
+	ret = sprintf(buf_temp, "(0x%x)=0x%x, (0x%x)=0x%x\n",
 		AUXADC_ACCDET, pmic_pwrap_read(AUXADC_ACCDET),
 		AUXADC_ADC5, pmic_pwrap_read(AUXADC_ADC5));
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
 #if 0
@@ -2243,9 +2318,11 @@ static int cat_register(char *buf)
 		g_accdet_auxadc_offset, Accdet_PMIC_IMM_GetOneChannelValue(1));
 	strncat(buf, buf_temp, strlen(buf_temp));
 #endif
-	sprintf(buf_temp, "[accdet_dts]deb0=0x%x,deb1=0x%x,deb3=0x%x,deb4=0x%x\n",
+	ret = sprintf(buf_temp, "[accdet_dts]deb0=0x%x,deb1=0x%x,deb3=0x%x,deb4=0x%x\n",
 		 accdet_cust_setting->debounce0, accdet_cust_setting->debounce1,
 		 accdet_cust_setting->debounce3, accdet_cust_setting->debounce4);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 	strncat(buf, buf_temp, strlen(buf_temp));
 
 	return 0;
@@ -2424,6 +2501,10 @@ static ssize_t store_accdet_rw_register(struct device_driver *ddri, const char *
 	}
 
 	ret = sscanf(buf, "%c", &rw_flag);
+	if (ret < 1) {
+		ACCDET_ERROR("[%s] read Invalid input!!\n",  __func__);
+		return ret;
+	}
 
 	if ((rw_flag == 'r') || (rw_flag == 'R')) {
 		ret = sscanf(buf, "%c,0x%x", &rw_flag, &addr_temp);
@@ -2469,11 +2550,15 @@ static ssize_t store_accdet_rw_register(struct device_driver *ddri, const char *
 
 static ssize_t show_accdet_rw_register(struct device_driver *ddri, char *buf)
 {
+	int ret = 0;
+
 	if (buf == NULL) {
 		ACCDET_ERROR("[%s] *buf is NULL Pointer\n",  __func__);
 		return -EINVAL;
 	}
-	sprintf(buf, "addr[0x%x]=0x%x\n", rw_value[0], rw_value[1]);
+	ret = sprintf(buf, "addr[0x%x]=0x%x\n", rw_value[0], rw_value[1]);
+	if (ret < 0)
+		ACCDET_INFO("[%s] sprintf occur error", __func__);
 
 	return strlen(buf);
 }
@@ -2481,13 +2566,16 @@ static ssize_t show_accdet_rw_register(struct device_driver *ddri, char *buf)
 static ssize_t show_accdet_state(struct device_driver *ddri, char *buf)
 {
 	char temp_type = (char)s_cable_type;
+	int ret = 0;
 
 	if (buf == NULL) {
 		ACCDET_ERROR("[%s] *buf is NULL Pointer\n",  __func__);
 		return -EINVAL;
 	}
 
-	snprintf(buf, 3, "%d\n", temp_type);
+	ret = snprintf(buf, 3, "%d\n", temp_type);
+	if (ret < 0)
+		ACCDET_INFO("[%s] snprintf occur error", __func__);
 
 	return strlen(buf);
 }
